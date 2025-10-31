@@ -29,11 +29,26 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
   )
 
   const toggleOption = (option: string) => {
-    const updated = selected.includes(option)
-      ? selected.filter((item) => item !== option)
-      : [...selected, option]
-    setSelected(updated)
+    if (selected.includes(option)) {
+      // 取消选择
+      setSelected(selected.filter((item) => item !== option))
+    } else {
+      // 限制最多3个
+      if (selected.length >= 3) {
+        alert(`⚠️ You can select up to 3 ${label.toLowerCase()} only.`)
+        return
+      }
+      setSelected([...selected, option])
+    }
   }
+
+  // ✅ 根据 label 定义 placeholder
+  const placeholderText =
+    label === 'Games'
+      ? 'Select up to 3 games'
+      : label === 'Your Experience'
+      ? 'Select up to 3 experiences'
+      : `Select ${label}`
 
   return (
     <div className="relative dropdown-container">
@@ -44,8 +59,8 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
         className="w-full flex justify-between items-center px-4 py-3 bg-white/20 border border-white/30 
                    rounded-xl text-sm text-gray-800 shadow-sm hover:bg-white/30 transition-all duration-200"
       >
-        <span className="truncate">
-          {selected.length > 0 ? `${selected.length} selected` : `Select ${label}`}
+        <span className={`truncate ${selected.length === 0 ? 'text-gray-500' : ''}`}>
+          {selected.length > 0 ? selected.join(', ') : placeholderText}
         </span>
         <ChevronDown
           className={`w-5 h-5 text-gray-500 transform transition-transform duration-300 ${
@@ -99,6 +114,7 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
     </div>
   )
 }
+
 
 // ====== ✅ 主表单 ======
 const ReviewForm = () => {

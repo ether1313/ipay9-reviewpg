@@ -1,80 +1,127 @@
-'use client';
+'use client'
 
-import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
-import { reviewBatches } from '@/app/data/reviewBatches';
-
-const PastReviews = dynamic(() => Promise.resolve(ClientOnlyPastReviews), { ssr: false });
+import { useState, useEffect, useRef } from 'react'
+import { ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { reviewBatches } from '@/app/data/reviewBatches'
 
 interface Review {
-  name: string;
-  rating: number;
-  games: string[];
-  comment: string;
-  wallet: string;
+  name: string
+  rating: number
+  games: string[]
+  comment: string
+  wallet: string
 }
 
-function ClientOnlyPastReviews() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [startIndex, setStartIndex] = useState(0);
-  const [expandedIndex, setExpandedIndex] = useState<number | null | -1>(null);
-  const [reviewCount, setReviewCount] = useState(127);
-  const [avgRating, setAvgRating] = useState(4.6);
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function PastReviews() {
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [startIndex, setStartIndex] = useState(0)
+  const [expandedIndex, setExpandedIndex] = useState<number | null | -1>(null)
+  const [reviewCount, setReviewCount] = useState(127)
+  const [avgRating, setAvgRating] = useState(4.6)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const nextBatchIndex = useRef(0)
+  const [hasRecentRealReview, setHasRecentRealReview] = useState(false)
 
-  // ✅ 全球一致算法：根据时间动态计算
+  // ✅ 拉取数据库最新评论 + 虚拟评论补位
+  const fetchReviews = async () => {
+    try {
+      const res = await fetch('/api/reviews', { cache: 'no-store' })
+      const data = await res.json()
+
+      // 数据库返回字段转成标准结构
+      const realReviews: Review[] = (data || []).map((r: any) => ({
+        name: r.name,
+        rating: r.rating,
+        games: typeof r.games === 'string' ? r.games.split(',').map((g: string) => g.trim()) : r.games,
+        comment: r.experiences || '',
+        wallet: r.casino_wallet || 'iPay9',
+      }))
+
+      // 虚拟评论补足
+      const allVirtual = reviewBatches.flat()
+      const offset = Math.floor(Date.now() / 3600000) % allVirtual.length
+      const virtualReviews: Review[] = Array.from({ length: 10 }, (_, i) => {
+        const raw = allVirtual[(offset + i) % allVirtual.length]
+        return {
+          name: raw.name,
+          rating: raw.rating,
+          games: raw.games || [],
+          comment: raw.comment || '',
+          wallet: raw.wallet || 'iPay9',
+        }
+      })
+
+      // 合并：真人评论优先，虚拟补足 10 条
+      const combined = [...realReviews, ...virtualReviews].slice(0, 10)
+      setReviews(combined)
+    } catch (err) {
+      console.error('❌ Failed to fetch reviews:', err)
+    }
+  }
+
+  // ✅ 初始加载 + 每分钟刷新一次（保持同步）
   useEffect(() => {
-    const baseDate = new Date('2025-10-31T00:00:00Z'); // 固定起点（UTC）
-    const now = new Date();
-    const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000);
+    fetchReviews()
+    const interval = setInterval(fetchReviews, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
-    // ---- 评论数量 ----
-    const baseCount = 127;
-    const randomGrowthPerHour = 8 + ((diffHours * 37) % 3); // 模拟随机增长 8~10
-    const totalReviews = baseCount + diffHours * randomGrowthPerHour;
-    setReviewCount(totalReviews);
-
-    // ---- 平均分 ----
-    const rating = 4.3 + ((diffHours * 17) % 40) / 100; // 模拟 4.3~4.7
-    setAvgRating(parseFloat(rating.toFixed(1)));
-
-    // ---- Review 批次循环 ----
-    const all = reviewBatches.flat();
-    const offset = diffHours % all.length;
-    const latest10 = Array.from({ length: 10 }, (_, i) => all[(offset + i) % all.length]);
-    setReviews(latest10);
-  }, []);
-
-  const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0));
-  const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5));
-
-  // ✅ 支援滑动手势
+  // ✅ 每小时自动插入虚拟评论（如果没人提交）
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    let startX = 0;
-    let endX = 0;
-    const handleTouchStart = (e: TouchEvent) => (startX = e.touches[0].clientX);
+    const timer = setInterval(() => {
+      if (!hasRecentRealReview) {
+        const all = reviewBatches.flat()
+        const raw = all[nextBatchIndex.current % all.length]
+        const next: Review = {
+          name: raw.name,
+          rating: raw.rating,
+          games: raw.games || [],
+          comment: raw.comment || '',
+          wallet: raw.wallet || 'iPay9',
+        }
+        nextBatchIndex.current++
+        setReviews((prev) => [next, ...prev].slice(0, 10))
+
+        const randomIncrement = Math.floor(Math.random() * 3) + 8
+        const randomRating = 4.3 + Math.random() * 0.4
+        setReviewCount((prev) => prev + randomIncrement)
+        setAvgRating(parseFloat(randomRating.toFixed(1)))
+      }
+    }, 3600000)
+
+    return () => clearInterval(timer)
+  }, [hasRecentRealReview])
+
+  // ✅ 手动滑动控制
+  const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))
+  const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5))
+
+  // ✅ 滑动手势支持
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    let startX = 0
+    let endX = 0
+    const handleTouchStart = (e: TouchEvent) => (startX = e.touches[0].clientX)
     const handleTouchEnd = (e: TouchEvent) => {
-      endX = e.changedTouches[0].clientX;
-      if (startX - endX > 50) handleNext();
-      if (endX - startX > 50) handlePrev();
-    };
-    container.addEventListener('touchstart', handleTouchStart);
-    container.addEventListener('touchend', handleTouchEnd);
+      endX = e.changedTouches[0].clientX
+      if (startX - endX > 50) handleNext()
+      if (endX - startX > 50) handlePrev()
+    }
+    container.addEventListener('touchstart', handleTouchStart)
+    container.addEventListener('touchend', handleTouchEnd)
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, []);
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [])
 
   return (
     <section className="pt-4 pb-10 sm:pt-6 sm:pb-12 px-4 relative bg-transparent">
       <div className="max-w-7xl mx-auto text-center relative">
         {/* ===== Header ===== */}
         <div className="flex flex-col items-center justify-center mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4">Testimonials</h2>
+          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4">Player Reviews</h2>
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
@@ -89,9 +136,7 @@ function ClientOnlyPastReviews() {
                 {avgRating.toFixed(1)}/5.0
               </span>
             </div>
-            <span className="text-xs text-gray-500">
-              {reviewCount.toLocaleString()} reviews
-            </span>
+            <span className="text-xs text-gray-500">{reviewCount.toLocaleString()} reviews</span>
           </div>
         </div>
 
@@ -112,7 +157,7 @@ function ClientOnlyPastReviews() {
               style={{ transform: `translateX(-${startIndex * 20}%)` }}
             >
               {reviews.map((review, index) => (
-                <div key={index} className="relative min-w-[20%] max-w-[20%] px-2">
+                <div key={index} className="relative min-w-[25%] max-w-[20%] px-2">
                   {index === 0 && (
                     <span className="absolute -top-4 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-md">
                       Latest Review
@@ -158,18 +203,21 @@ function ClientOnlyPastReviews() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
-const ReviewCard = ({ review, isMobile = false }: any) => {
+// ===== Review Card =====
+const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: boolean }) => {
   const getAvatarUrl = (name: string) =>
-    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=transparent`;
+    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(
+      name.trim()
+    )}&backgroundColor=transparent`
 
   return (
     <div
       className={`bg-white border border-gray-100 shadow-sm rounded-3xl ${
-        isMobile ? 'p-4 h-auto' : 'p-6 h-[320px]'
-      } flex flex-col justify-between text-left transition hover:shadow-lg sm:hover:scale-[1.01] relative`}
+        isMobile ? 'p-4 h-auto' : 'p-6 h-[360px]'
+      } flex flex-col justify-between text-left transition hover:shadow-lg sm:hover:scale-[1.01]`}
     >
       <div>
         <div className="flex items-center gap-3 mb-3">
@@ -194,7 +242,7 @@ const ReviewCard = ({ review, isMobile = false }: any) => {
         </div>
 
         <div className="flex flex-wrap gap-1.5 mb-2 sm:mb-3">
-          {review.games?.map((game: string, i: number) => (
+          {review.games?.map((game, i) => (
             <span
               key={i}
               className="text-[10px] sm:text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100"
@@ -208,16 +256,14 @@ const ReviewCard = ({ review, isMobile = false }: any) => {
       </div>
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-2 sm:pt-3">
-        <span className="text-xs text-gray-400">Aus Wallet</span>
+        <span className="text-xs text-gray-400">Wallet</span>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <img src="/australia-flag.png" alt="Australian Flag" className="w-4 h-4 sm:w-5 sm:h-5" />
+          <img src="/australia-flag.png" alt="Flag" className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="text-[10px] sm:text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
             {review.wallet}
           </span>
         </div>
       </div>
     </div>
-  );
-};
-
-export default PastReviews;
+  )
+}
