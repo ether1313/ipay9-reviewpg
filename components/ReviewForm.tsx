@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -109,18 +110,6 @@ const ReviewForm = () => {
   const [others, setOthers] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState('')
-  const [reviews, setReviews] = useState<any[]>([])
-
-  // ✅ Supabase GET — 即时更新
-  const fetchReviews = async () => {
-    const res = await fetch('/api/reviews')
-    const data = await res.json()
-    setReviews(data)
-  }
-
-  useEffect(() => {
-    fetchReviews()
-  }, [])
 
   // 游戏和体验数据
   const liveGames = [
@@ -217,7 +206,7 @@ const ReviewForm = () => {
     "High RTP, real winnings",
     "Stable and reliable every time"
   ];
-  
+
   const allGames = [
     { label: 'Live Games', isGroup: true },
     ...liveGames.map((g) => ({ label: g })),
@@ -258,7 +247,6 @@ const ReviewForm = () => {
         setSelectedGames([])
         setSelectedExperiences([])
         setOthers('')
-        fetchReviews() // ✅ 自动刷新列表
         window.scrollTo({ top: 0, behavior: 'smooth' })
         setTimeout(() => setSubmitStatus(''), 3000)
       } else {
@@ -370,24 +358,6 @@ const ReviewForm = () => {
               </div>
             )}
           </form>
-
-          {/* ✅ 实时显示最新留言 */}
-          {reviews.length > 0 && (
-            <div className="mt-10">
-              <h3 className="text-xl font-semibold mb-4">Recent Reviews</h3>
-              <ul className="space-y-4">
-                {reviews.map((r) => (
-                  <li key={r.id} className="bg-white/30 rounded-xl p-4 border border-white/20">
-                    <p className="text-sm font-semibold text-gray-800">{r.name}</p>
-                    <p className="text-xs text-gray-600">{r.games}</p>
-                    <p className="text-sm mt-2">{r.experiences}</p>
-                    <p className="text-yellow-500 text-sm mt-1">⭐ {r.rating}/5</p>
-                    {r.others && <p className="text-gray-700 text-sm mt-1 italic">“{r.others}”</p>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       </div>
     </section>

@@ -22,19 +22,33 @@ function ClientOnlyPastReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [startIndex, setStartIndex] = useState(0);
   const [expandedIndex, setExpandedIndex] = useState<number | null | -1>(null);
-  const [reviewCount, setReviewCount] = useState(10127);
+  const [reviewCount, setReviewCount] = useState(127); 
   const [avgRating, setAvgRating] = useState(4.6);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ✅ 每30分钟~1小时增加随机10~15个评论数
   useEffect(() => {
-    const interval = setInterval(() => {
-      setReviewCount((prev) => prev + Math.floor(Math.random() * 4) + 2);
-      const random = 3 + Math.random() * 2;
-      setAvgRating(Math.max(3, Math.min(5, random)));
-    }, 3600000);
-    return () => clearInterval(interval);
+    const updateInterval = () => {
+      const randomIncrement = Math.floor(Math.random() * 6) + 10; // +10~15
+      setReviewCount((prev) => prev + randomIncrement);
+
+      // 每次重新计算平均分，带轻微浮动
+      const randomRating = 4 + Math.random() * 1; // 4~5之间浮动
+      setAvgRating(Math.max(3, Math.min(5, randomRating)));
+    };
+
+    // 随机间隔：30~60分钟（毫秒）
+    const getRandomInterval = () => (30 + Math.floor(Math.random() * 31)) * 60 * 1000;
+
+    let interval = setTimeout(function repeat() {
+      updateInterval();
+      interval = setTimeout(repeat, getRandomInterval());
+    }, getRandomInterval());
+
+    return () => clearTimeout(interval);
   }, []);
 
+  // ✅ 初始化评论 + 每小时更新一条新review
   useEffect(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     let lastIndex = parseInt(localStorage.getItem(LAST_INDEX_KEY) || '10');
@@ -61,7 +75,7 @@ function ClientOnlyPastReviews() {
         localStorage.setItem(LAST_INDEX_KEY, lastIndex.toString());
         return updated;
       });
-    }, 3600000);
+    }, 3600000); // 每小时新增一条
 
     return () => clearInterval(interval);
   }, []);
@@ -90,7 +104,6 @@ function ClientOnlyPastReviews() {
 
   return (
     <section className="pt-4 pb-10 sm:pt-6 sm:pb-12 px-4 relative bg-transparent">
-
       <div className="max-w-7xl mx-auto text-center relative">
         {/* ===== Header ===== */}
         <div className="flex flex-col items-center justify-center mb-10 sm:mb-12">
@@ -109,7 +122,9 @@ function ClientOnlyPastReviews() {
                 {avgRating.toFixed(1)}/5.0
               </span>
             </div>
-            <span className="text-xs text-gray-500">{reviewCount.toLocaleString()} reviews</span>
+            <span className="text-xs text-gray-500">
+              {reviewCount.toLocaleString()} reviews
+            </span>
           </div>
         </div>
 
@@ -190,7 +205,7 @@ function ClientOnlyPastReviews() {
   );
 }
 
-// ✅ Review Card Component (保持原样)
+// ✅ Review Card（保持原样）
 const ReviewCard = ({ review, index, expandedIndex, setExpandedIndex, isMobile = false }: any) => {
   const getAvatarUrl = (name: string) =>
     `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(
