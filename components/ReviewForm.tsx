@@ -264,8 +264,11 @@ const ReviewForm = () => {
     <section id="review-form" className="py-12 px-4">
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
         <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl relative overflow-hidden">
-          <h2 className="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-            Share Your Casino Experience
+          <h2
+            className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 leading-snug"
+          >
+            Share Your<br className="block" />
+            Casino Experience
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">

@@ -17,38 +17,50 @@ interface Review {
 
 function ClientOnlyPastReviews() {
   const LOCAL_STORAGE_KEY = 'player_reviews';
-  const LAST_UPDATE_KEY = 'player_reviews_last_update';
   const LAST_INDEX_KEY = 'player_reviews_last_index';
+  const COUNT_KEY = 'player_review_count';
   const [reviews, setReviews] = useState<Review[]>([]);
   const [startIndex, setStartIndex] = useState(0);
   const [expandedIndex, setExpandedIndex] = useState<number | null | -1>(null);
-  const [reviewCount, setReviewCount] = useState(127); 
+  const [reviewCount, setReviewCount] = useState(127);
   const [avgRating, setAvgRating] = useState(4.6);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ 每30分钟~1小时增加随机10~15个评论数
+  // ✅ 初始化评论数（从 localStorage 读取）
   useEffect(() => {
-    const updateInterval = () => {
-      const randomIncrement = Math.floor(Math.random() * 6) + 10; // +10~15
-      setReviewCount((prev) => prev + randomIncrement);
+    const savedCount = localStorage.getItem(COUNT_KEY);
+    if (savedCount) {
+      setReviewCount(parseInt(savedCount, 10));
+    } else {
+      setReviewCount(127);
+      localStorage.setItem(COUNT_KEY, '127');
+    }
+  }, []);
 
-      // 每次重新计算平均分，带轻微浮动
-      const randomRating = 4 + Math.random() * 1; // 4~5之间浮动
+  // ✅ 定期更新评论数并持久保存
+  useEffect(() => {
+    const updateCount = () => {
+      const randomIncrement = Math.floor(Math.random() * 6) + 10; // +10 ~ +15
+      setReviewCount((prev) => {
+        const updated = prev + randomIncrement;
+        localStorage.setItem(COUNT_KEY, updated.toString());
+        return updated;
+      });
+
+      const randomRating = 4 + Math.random() * 1;
       setAvgRating(Math.max(3, Math.min(5, randomRating)));
     };
 
-    // 随机间隔：30~60分钟（毫秒）
-    const getRandomInterval = () => (30 + Math.floor(Math.random() * 31)) * 60 * 1000;
-
-    let interval = setTimeout(function repeat() {
-      updateInterval();
-      interval = setTimeout(repeat, getRandomInterval());
+    const getRandomInterval = () => (30 + Math.floor(Math.random() * 31)) * 60 * 1000; // 30~60分钟
+    let timer = setTimeout(function repeat() {
+      updateCount();
+      timer = setTimeout(repeat, getRandomInterval());
     }, getRandomInterval());
 
-    return () => clearTimeout(interval);
+    return () => clearTimeout(timer);
   }, []);
 
-  // ✅ 初始化评论 + 每小时更新一条新review
+  // ✅ 初始化 review 列表
   useEffect(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     let lastIndex = parseInt(localStorage.getItem(LAST_INDEX_KEY) || '10');
@@ -59,7 +71,6 @@ function ClientOnlyPastReviews() {
       const initial = reviewBatches.flat().slice(0, 10) as Review[];
       setReviews(initial);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initial));
-      localStorage.setItem(LAST_UPDATE_KEY, new Date().toISOString());
       localStorage.setItem(LAST_INDEX_KEY, '10');
     }
 
@@ -75,7 +86,7 @@ function ClientOnlyPastReviews() {
         localStorage.setItem(LAST_INDEX_KEY, lastIndex.toString());
         return updated;
       });
-    }, 3600000); // 每小时新增一条
+    }, 3600000); // 每小时更新一条新review
 
     return () => clearInterval(interval);
   }, []);
@@ -83,6 +94,7 @@ function ClientOnlyPastReviews() {
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0));
   const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5));
 
+  // ✅ 触控滑动控制
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -171,42 +183,13 @@ function ClientOnlyPastReviews() {
             <ChevronRight className="w-6 h-6 text-gray-600" />
           </button>
         </div>
-
-        {/* ===== Mobile Layout ===== */}
-        <div className="relative sm:hidden flex flex-col gap-4">
-          {reviews.slice(0, expandedIndex === -1 ? 10 : 5).map((review, index) => (
-            <div key={index} className="relative">
-              {index === 0 && (
-                <span className="absolute -top-3 right-3 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
-                  Latest Review
-                </span>
-              )}
-              <ReviewCard
-                review={review}
-                index={index}
-                expandedIndex={null}
-                setExpandedIndex={() => {}}
-                isMobile
-              />
-            </div>
-          ))}
-
-          {reviews.length > 5 && (
-            <button
-              onClick={() => setExpandedIndex(expandedIndex === -1 ? null : -1)}
-              className="mt-3 mx-auto text-sm font-semibold text-blue-600 bg-blue-50 px-5 py-2 rounded-full shadow-sm hover:bg-blue-100 transition"
-            >
-              {expandedIndex === -1 ? 'Show Less' : 'Show More'}
-            </button>
-          )}
-        </div>
       </div>
     </section>
   );
 }
 
-// ✅ Review Card（保持原样）
-const ReviewCard = ({ review, index, expandedIndex, setExpandedIndex, isMobile = false }: any) => {
+// ✅ Review Card 保持不变
+const ReviewCard = ({ review, isMobile = false }: any) => {
   const getAvatarUrl = (name: string) =>
     `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(
       name.trim()
