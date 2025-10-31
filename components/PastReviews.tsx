@@ -3,6 +3,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import { reviewBatches } from '@/app/data/reviewBatches'
+import { createClient } from '@supabase/supabase-js'
+
+// ✅ 初始化 Supabase（放你自己的环境变量）
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface Review {
   name: string
@@ -19,84 +26,89 @@ export default function PastReviews() {
   const [reviewCount, setReviewCount] = useState(127)
   const [avgRating, setAvgRating] = useState(4.6)
   const containerRef = useRef<HTMLDivElement>(null)
-  const nextBatchIndex = useRef(0)
-  const [hasRecentRealReview, setHasRecentRealReview] = useState(false)
 
-  // ✅ 拉取数据库最新评论 + 虚拟评论补位
-  const fetchReviews = async () => {
-    try {
-      const res = await fetch('/api/reviews', { cache: 'no-store' })
-      const data = await res.json()
-
-      // 数据库返回字段转成标准结构
-      const realReviews: Review[] = (data || []).map((r: any) => ({
-        name: r.name,
-        rating: r.rating,
-        games: typeof r.games === 'string' ? r.games.split(',').map((g: string) => g.trim()) : r.games,
-        comment: r.experiences || '',
-        wallet: r.casino_wallet || 'iPay9',
-      }))
-
-      // 虚拟评论补足
-      const allVirtual = reviewBatches.flat()
-      const offset = Math.floor(Date.now() / 3600000) % allVirtual.length
-      const virtualReviews: Review[] = Array.from({ length: 10 }, (_, i) => {
-        const raw = allVirtual[(offset + i) % allVirtual.length]
-        return {
-          name: raw.name,
-          rating: raw.rating,
-          games: raw.games || [],
-          comment: raw.comment || '',
-          wallet: raw.wallet || 'iPay9',
-        }
-      })
-
-      // 合并：真人评论优先，虚拟补足 10 条
-      const combined = [...realReviews, ...virtualReviews].slice(0, 10)
-      setReviews(combined)
-    } catch (err) {
-      console.error('❌ Failed to fetch reviews:', err)
-    }
-  }
-
-  // ✅ 初始加载 + 每分钟刷新一次（保持同步）
+  // ✅ 全球一致逻辑 + 实时更新逻辑
   useEffect(() => {
+    const baseDate = new Date('2025-10-31T00:00:00Z') // 固定UTC基准时间
+    const now = new Date()
+    const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
+
+    // 固定演算评论总数与平均评分（所有人都一样）
+    const baseCount = 127
+    const growthPerHour = 9
+    setReviewCount(baseCount + diffHours * growthPerHour)
+    const avg = 4.3 + ((diffHours % 4) * 0.1)
+    setAvgRating(parseFloat(avg.toFixed(1)))
+
+    // 🔹 拉取真实 + 虚拟评论
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch('/api/reviews', { cache: 'no-store' })
+        const data = await res.json()
+
+        // ✅ 真实评论（取最新5条）
+        const realReviews: Review[] = (data || [])
+          .sort((a: any, b: any) => b.id - a.id)
+          .slice(0, 5)
+          .map((r: any) => ({
+            name: r.name,
+            rating: r.rating,
+            games:
+              typeof r.games === 'string'
+                ? r.games.split(',').map((g: string) => g.trim())
+                : r.games,
+            comment: r.experiences || '',
+            wallet: r.casino_wallet || 'iPay9',
+          }))
+
+        // ✅ 虚拟评论（根据固定时间偏移，全球一致）
+        const allVirtual = reviewBatches.flat()
+        const offset = diffHours % allVirtual.length
+        const virtualReviews: Review[] = Array.from({ length: 10 }, (_, i) => {
+          const raw = allVirtual[(offset + i) % allVirtual.length]
+          return {
+            name: raw.name,
+            rating: raw.rating,
+            games: raw.games || [],
+            comment: raw.comment || '',
+            wallet: raw.wallet || 'iPay9',
+          }
+        })
+
+        // ✅ 合并（真实优先，虚拟补足10条）
+        const combined = [...realReviews, ...virtualReviews].slice(0, 10)
+        setReviews(combined)
+      } catch (err) {
+        console.error('❌ Failed to fetch reviews:', err)
+      }
+    }
+
+    // ✅ 初次加载评论
     fetchReviews()
-    const interval = setInterval(fetchReviews, 60000)
-    return () => clearInterval(interval)
+
+    // ✅ Realtime监听：当有人新增评论 -> 自动刷新
+    const channel = supabase
+      .channel('realtime:ipay9-review')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ipay9-review' },
+        (payload) => {
+          console.log('🟢 New review inserted:', payload.new)
+          fetchReviews() // 自动刷新显示新评论
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
-  // ✅ 每小时自动插入虚拟评论（如果没人提交）
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (!hasRecentRealReview) {
-        const all = reviewBatches.flat()
-        const raw = all[nextBatchIndex.current % all.length]
-        const next: Review = {
-          name: raw.name,
-          rating: raw.rating,
-          games: raw.games || [],
-          comment: raw.comment || '',
-          wallet: raw.wallet || 'iPay9',
-        }
-        nextBatchIndex.current++
-        setReviews((prev) => [next, ...prev].slice(0, 10))
-
-        const randomIncrement = Math.floor(Math.random() * 3) + 8
-        const randomRating = 4.3 + Math.random() * 0.4
-        setReviewCount((prev) => prev + randomIncrement)
-        setAvgRating(parseFloat(randomRating.toFixed(1)))
-      }
-    }, 3600000)
-
-    return () => clearInterval(timer)
-  }, [hasRecentRealReview])
-
-  // ✅ 手动滑动控制
+  // ✅ 滑动控制（桌面）
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))
   const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5))
 
-  // ✅ 滑动手势支持
+  // ✅ 手势滑动（移动端）
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -117,11 +129,11 @@ export default function PastReviews() {
   }, [])
 
   return (
-    <section className="pt-4 pb-10 sm:pt-6 sm:pb-12 px-4 relative bg-transparent">
+    <section id="testimonial-section" className="pt-1 pb-10 sm:pt-3 sm:pb-12 px-4 relative bg-transparent">
       <div className="max-w-7xl mx-auto text-center relative">
         {/* ===== Header ===== */}
         <div className="flex flex-col items-center justify-center mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4">Player Reviews</h2>
+          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4">Testimonials</h2>
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
@@ -157,7 +169,7 @@ export default function PastReviews() {
               style={{ transform: `translateX(-${startIndex * 20}%)` }}
             >
               {reviews.map((review, index) => (
-                <div key={index} className="relative min-w-[25%] max-w-[20%] px-2">
+                <div key={index} className="relative min-w-[25%] max-w-[25%] px-3">
                   {index === 0 && (
                     <span className="absolute -top-4 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-md">
                       Latest Review
@@ -179,28 +191,55 @@ export default function PastReviews() {
           </button>
         </div>
 
-        {/* ===== Mobile Layout ===== */}
-        <div className="relative sm:hidden flex flex-col gap-4">
-          {reviews.slice(0, expandedIndex === -1 ? 10 : 5).map((review, index) => (
-            <div key={index} className="relative">
-              {index === 0 && (
-                <span className="absolute -top-3 right-3 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
-                  Latest Review
-                </span>
-              )}
-              <ReviewCard review={review} isMobile />
-            </div>
-          ))}
+        {/* ===== Mobile Layout (with animation) ===== */}
+        <div className="relative sm:hidden flex flex-col gap-4 transition-all duration-700 ease-in-out">
+          <div
+            className={`grid gap-4 transition-all duration-700 ease-in-out overflow-visible ${
+              expandedIndex === -1 ? 'max-h-[4000px]' : 'max-h-[2000px]'
+            }`}
+          >
+            {reviews.slice(0, expandedIndex === -1 ? 10 : 5).map((review, index) => (
+              <div key={index} id={`review-${index + 1}`} className="relative transition-all duration-500">
+
+                {index === 0 && (
+                  <span className="absolute -top-3 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
+                    Latest Review
+                  </span>
+                )}
+                <ReviewCard review={review} isMobile />
+              </div>
+            ))}
+          </div>
 
           {reviews.length > 5 && (
-            <button
-              onClick={() => setExpandedIndex(expandedIndex === -1 ? null : -1)}
-              className="mt-3 mx-auto text-sm font-semibold text-blue-600 bg-blue-50 px-5 py-2 rounded-full shadow-sm hover:bg-blue-100 transition"
-            >
-              {expandedIndex === -1 ? 'Show Less' : 'Show More'}
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (expandedIndex === -1) {
+                // 👉 Show Less：回到最上方（第一個review）
+                const sectionTop = document.querySelector('#testimonial-section')?.getBoundingClientRect().top
+                const scrollTop = window.scrollY + (sectionTop ?? 0) - 40 // 稍微留空一點
+                window.scrollTo({ top: scrollTop, behavior: 'smooth' })
+                setTimeout(() => setExpandedIndex(null), 400)
+              } else {
+                // 👉 Show More：展開後滾動到第6個review的位置
+                setExpandedIndex(-1)
+                setTimeout(() => {
+                  const sixth = document.querySelector('#review-6')
+                  if (sixth) {
+                    const rect = sixth.getBoundingClientRect().top
+                    const scrollTop = window.scrollY + rect - 80 // 視覺上略微貼近
+                    window.scrollTo({ top: scrollTop, behavior: 'smooth' })
+                  }
+                }, 400)
+              }
+            }}
+            className="mt-3 mx-auto text-sm font-semibold text-blue-600 bg-blue-50 px-5 py-2 rounded-full shadow-sm hover:bg-blue-100 transition-transform duration-500 active:scale-95"
+          >
+            {expandedIndex === -1 ? 'Show Less' : 'Show More'}
+          </button>
+        )}
         </div>
+
       </div>
     </section>
   )

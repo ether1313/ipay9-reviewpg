@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/utils/supabase/client'
 
+// ✅ 禁用 Next.js 缓存，确保返回实时数据
+export const revalidate = 0
+
 // ✅ POST：新增一条用户评论
 export async function POST(req: Request) {
   try {
@@ -25,10 +28,14 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
+    // ✅ 成功响应
     return NextResponse.json({ message: '✅ Review saved successfully!' })
   } catch (error: any) {
     console.error('❌ Error saving review:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -42,9 +49,21 @@ export async function GET() {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    // ✅ 设置响应头：禁止缓存
+    return new NextResponse(JSON.stringify(data), {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+        'Content-Type': 'application/json',
+      },
+    })
   } catch (error: any) {
     console.error('❌ Error fetching reviews:', error)
-    return NextResponse.json({ error: error.message || 'Failed to fetch reviews' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch reviews' },
+      { status: 500 }
+    )
   }
 }
