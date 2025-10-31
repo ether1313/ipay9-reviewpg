@@ -29,7 +29,7 @@ export default function PastReviews() {
 
   // ✅ 全球一致逻辑 + 实时更新逻辑
   useEffect(() => {
-    const baseDate = new Date('2025-10-31T00:00:00Z') // 固定UTC基准时间
+    const baseDate = new Date('2025-11-01T00:00:00Z') // 固定UTC基准时间
     const now = new Date()
     const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
 
