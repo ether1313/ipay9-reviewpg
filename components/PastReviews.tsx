@@ -15,114 +15,82 @@ interface Review {
   wallet: string;
 }
 
-// ✅ 數字動畫 Hook（平滑過渡）
-function useAnimatedNumber(targetValue: number, duration = 1000) {
-  const [displayValue, setDisplayValue] = useState(targetValue);
-  const ref = useRef<number>(targetValue);
-
-  useEffect(() => {
-    const startValue = ref.current;
-    const diff = targetValue - startValue;
-    const startTime = performance.now();
-
-    function animate(now: number) {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const eased = startValue + diff * progress;
-      setDisplayValue(eased);
-      if (progress < 1) requestAnimationFrame(animate);
-      else ref.current = targetValue;
-    }
-
-    requestAnimationFrame(animate);
-  }, [targetValue, duration]);
-
-  return displayValue;
-}
-
 function ClientOnlyPastReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [startIndex, setStartIndex] = useState(0);
+  const [expandedIndex, setExpandedIndex] = useState<number | null | -1>(null);
   const [reviewCount, setReviewCount] = useState(127);
   const [avgRating, setAvgRating] = useState(4.6);
-  const [startIndex, setStartIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ 固定全局起點時間（全站一致）
-  const launchTime = new Date('2025-10-31T00:00:00Z');
+  // ✅ 全球一致算法：根据时间动态计算
+  useEffect(() => {
+    const baseDate = new Date('2025-10-31T00:00:00Z'); // 固定起点（UTC）
+    const now = new Date();
+    const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000);
 
-  // ✅ 全局伪实时算法（每小时随机增加8–10条）
-  const getGlobalStats = () => {
-    const elapsedHours = Math.floor((Date.now() - launchTime.getTime()) / (1000 * 60 * 60));
-    const pseudoRandom = (seed: number) => Math.abs(Math.sin(seed * 888)) % 1; // 固定伪随机算法
-
-    // 计算累积增加值（全站一致的随机模式）
-    let totalIncrease = 0;
-    for (let i = 0; i < elapsedHours; i++) {
-      totalIncrease += 8 + Math.floor(pseudoRandom(i) * 3); // +8~10
-    }
-
+    // ---- 评论数量 ----
     const baseCount = 127;
-    const count = baseCount + totalIncrease;
+    const randomGrowthPerHour = 8 + ((diffHours * 37) % 3); // 模拟随机增长 8~10
+    const totalReviews = baseCount + diffHours * randomGrowthPerHour;
+    setReviewCount(totalReviews);
 
-    // 平均评分平滑波动（4.45~4.75）
-    const rating = 4.6 + 0.15 * Math.sin(elapsedHours / 48);
+    // ---- 平均分 ----
+    const rating = 4.3 + ((diffHours * 17) % 40) / 100; // 模拟 4.3~4.7
+    setAvgRating(parseFloat(rating.toFixed(1)));
 
-    return { count, rating: Math.min(5, Math.max(3, rating)) };
-  };
-
-  // ✅ 每分钟重新计算（所有用户看到相同增长）
-  useEffect(() => {
-    const update = () => {
-      const { count, rating } = getGlobalStats();
-      setReviewCount(count);
-      setAvgRating(rating);
-    };
-    update();
-    const timer = setInterval(update, 60000); // 每分钟刷新一次
-    return () => clearInterval(timer);
-  }, []);
-
-  // ✅ Review 列表统一（按时间滚动索引）
-  useEffect(() => {
+    // ---- Review 批次循环 ----
     const all = reviewBatches.flat();
-    const elapsedHours = Math.floor((Date.now() - launchTime.getTime()) / (1000 * 60 * 60));
-    const lastIndex = (10 + elapsedHours) % all.length;
-    const latestBatch = [all[lastIndex], ...all.slice(0, 9)];
-    setReviews(latestBatch);
+    const offset = diffHours % all.length;
+    const latest10 = Array.from({ length: 10 }, (_, i) => all[(offset + i) % all.length]);
+    setReviews(latest10);
   }, []);
-
-  // ✅ 平滑動畫值
-  const animatedReviewCount = useAnimatedNumber(reviewCount, 1500);
-  const animatedRating = useAnimatedNumber(avgRating, 1500);
 
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0));
   const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5));
+
+  // ✅ 支援滑动手势
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let startX = 0;
+    let endX = 0;
+    const handleTouchStart = (e: TouchEvent) => (startX = e.touches[0].clientX);
+    const handleTouchEnd = (e: TouchEvent) => {
+      endX = e.changedTouches[0].clientX;
+      if (startX - endX > 50) handleNext();
+      if (endX - startX > 50) handlePrev();
+    };
+    container.addEventListener('touchstart', handleTouchStart);
+    container.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
 
   return (
     <section className="pt-4 pb-10 sm:pt-6 sm:pb-12 px-4 relative bg-transparent">
       <div className="max-w-7xl mx-auto text-center relative">
         {/* ===== Header ===== */}
         <div className="flex flex-col items-center justify-center mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 leading-snug">
-            Testimonials
-          </h2>
-
-          <div className="flex flex-col items-center gap-1 mt-3">
+          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4">Testimonials</h2>
+          <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
                   size={18}
-                  fill={i < Math.round(animatedRating) ? '#facc15' : '#e5e7eb'}
+                  fill={i < Math.round(avgRating) ? '#facc15' : '#e5e7eb'}
                   stroke="none"
                 />
               ))}
               <span className="ml-1 font-semibold text-gray-800 text-sm sm:text-base">
-                {animatedRating.toFixed(1)}/5.0
+                {avgRating.toFixed(1)}/5.0
               </span>
             </div>
-
-            <span className="text-xs text-gray-500 transition-all duration-500">
-              {Math.round(animatedReviewCount).toLocaleString()} reviews
+            <span className="text-xs text-gray-500">
+              {reviewCount.toLocaleString()} reviews
             </span>
           </div>
         </div>
@@ -168,7 +136,7 @@ function ClientOnlyPastReviews() {
 
         {/* ===== Mobile Layout ===== */}
         <div className="relative sm:hidden flex flex-col gap-4">
-          {reviews.map((review, index) => (
+          {reviews.slice(0, expandedIndex === -1 ? 10 : 5).map((review, index) => (
             <div key={index} className="relative">
               {index === 0 && (
                 <span className="absolute -top-3 right-3 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
@@ -178,18 +146,24 @@ function ClientOnlyPastReviews() {
               <ReviewCard review={review} isMobile />
             </div>
           ))}
+
+          {reviews.length > 5 && (
+            <button
+              onClick={() => setExpandedIndex(expandedIndex === -1 ? null : -1)}
+              className="mt-3 mx-auto text-sm font-semibold text-blue-600 bg-blue-50 px-5 py-2 rounded-full shadow-sm hover:bg-blue-100 transition"
+            >
+              {expandedIndex === -1 ? 'Show Less' : 'Show More'}
+            </button>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-// ✅ Review Card（保持原樣）
 const ReviewCard = ({ review, isMobile = false }: any) => {
   const getAvatarUrl = (name: string) =>
-    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(
-      name.trim()
-    )}&backgroundColor=transparent`;
+    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=transparent`;
 
   return (
     <div
