@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import { reviewBatches } from '@/app/data/reviewBatches'
 import { createClient } from '@supabase/supabase-js'
 
-// ✅ 初始化 Supabase（放你自己的环境变量）
+// ✅ 初始化 Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -23,30 +23,41 @@ export default function PastReviews() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [startIndex, setStartIndex] = useState(0)
   const [expandedIndex, setExpandedIndex] = useState<number | null | -1>(null)
-  const [reviewCount, setReviewCount] = useState(127)
+  const [reviewCount, setReviewCount] = useState(102)
   const [avgRating, setAvgRating] = useState(4.6)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ✅ 全球一致逻辑 + 实时更新逻辑
+  // ✅ 全域一致 + 每4小時更新邏輯
   useEffect(() => {
-    const baseDate = new Date('2025-10-31T00:00:00Z') // 固定UTC基准时间
+    const baseDate = new Date('2025-11-01T00:00:00Z')
     const now = new Date()
     const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
 
-    // 固定演算评论总数与平均评分（所有人都一样）
-    const baseCount = 127
-    const growthPerHour = 9
-    setReviewCount(baseCount + diffHours * growthPerHour)
-    const avg = 4.3 + ((diffHours % 4) * 0.1)
+    // ⏱ 每4小時一個時間段（全世界一致）
+    const fourHourBlock = Math.floor(diffHours / 4)
+
+    // ✅ 隨機數生成器（固定每4小時同一批人看到相同結果）
+    const randomSeed = (seed: number) => {
+      const x = Math.sin(seed) * 10000
+      return x - Math.floor(x)
+    }
+
+    // ✅ Review count: 每4小時增加 5–10 個
+    const randomGrowth = Math.floor(5 + randomSeed(fourHourBlock) * 6)
+    const baseCount = 102
+    setReviewCount(baseCount + fourHourBlock * randomGrowth)
+
+    // ✅ 平均評分：在 4.4 - 4.7 間浮動
+    const avg = 4.4 + randomSeed(fourHourBlock + 999) * 0.3
     setAvgRating(parseFloat(avg.toFixed(1)))
 
-    // 🔹 拉取真实 + 虚拟评论
-    const fetchReviews = async () => {
+    // ✅ 主函數：更新評論內容
+    const updateReviews = async () => {
       try {
         const res = await fetch('/api/reviews', { cache: 'no-store' })
         const data = await res.json()
 
-        // ✅ 真实评论（取最新5条）
+        // 真實評論（最新5條）
         const realReviews: Review[] = (data || [])
           .sort((a: any, b: any) => b.id - a.id)
           .slice(0, 5)
@@ -61,32 +72,47 @@ export default function PastReviews() {
             wallet: r.casino_wallet || 'iPay9',
           }))
 
-        // ✅ 虚拟评论（根据固定时间偏移，全球一致）
+        // 虛構評論（每4小時換一次）
         const allVirtual = reviewBatches.flat()
-        const offset = diffHours % allVirtual.length
-        const virtualReviews: Review[] = Array.from({ length: 10 }, (_, i) => {
-          const raw = allVirtual[(offset + i) % allVirtual.length]
+        const offset = fourHourBlock % allVirtual.length
+        const virtualPool: Review[] = Array.from({ length: 10 }, (_, i) => {
+          const v = allVirtual[(offset + i) % allVirtual.length]
           return {
-            name: raw.name,
-            rating: raw.rating,
-            games: raw.games || [],
-            comment: raw.comment || '',
-            wallet: raw.wallet || 'iPay9',
+            name: v.name,
+            rating: v.rating,
+            games: v.games,
+            comment: v.comment,
+            wallet: v.wallet,
           }
         })
 
-        // ✅ 合并（真实优先，虚拟补足10条）
-        const combined = [...realReviews, ...virtualReviews].slice(0, 10)
+        // ✅ 合併邏輯：真實優先，但隨機插入位置
+        let combined: Review[] = []
+        if (realReviews.length > 0) {
+          const shuffledVirtual = [...virtualPool].sort(() => Math.random() - 0.5)
+          combined = [
+            ...realReviews.map((r, i) => ({ ...r, order: i + Math.random() })),
+            ...shuffledVirtual.map((v, i) => ({ ...v, order: i + realReviews.length + Math.random() })),
+          ]
+            .sort((a, b) => a.order - b.order)
+            .slice(0, 10)
+        } else {
+          combined = virtualPool
+        }
+
         setReviews(combined)
       } catch (err) {
         console.error('❌ Failed to fetch reviews:', err)
       }
     }
 
-    // ✅ 初次加载评论
-    fetchReviews()
+    // 初次載入
+    updateReviews()
 
-    // ✅ Realtime监听：当有人新增评论 -> 自动刷新
+    // ✅ 每4小時自動更新一次
+    const interval = setInterval(updateReviews, 4 * 60 * 60 * 1000)
+
+    // ✅ Supabase 即時監聽
     const channel = supabase
       .channel('realtime:ipay9-review')
       .on(
@@ -94,21 +120,22 @@ export default function PastReviews() {
         { event: 'INSERT', schema: 'public', table: 'ipay9-review' },
         (payload) => {
           console.log('🟢 New review inserted:', payload.new)
-          fetchReviews() // 自动刷新显示新评论
+          updateReviews()
         }
       )
       .subscribe()
 
     return () => {
+      clearInterval(interval)
       supabase.removeChannel(channel)
     }
   }, [])
 
-  // ✅ 滑动控制（桌面）
+  // 滑動控制（桌面）
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))
   const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5))
 
-  // ✅ 手势滑动（移动端）
+  // 手勢滑動（行動端）
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -129,11 +156,11 @@ export default function PastReviews() {
   }, [])
 
   return (
-    <section id="testimonial-section" className="pt-1 pb-10 sm:pt-3 sm:pb-12 px-4 relative bg-transparent">
+    <section id="testimonial-section" className="pt-1 pb-10 sm:pt-2 sm:pb-12 px-4 relative bg-transparent">
       <div className="max-w-7xl mx-auto text-center relative">
         {/* ===== Header ===== */}
-        <div className="flex flex-col items-center justify-center mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4">Testimonials</h2>
+        <div className="flex flex-col items-center justify-center mb-8 sm:mb-10">
+          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 sm:mb-3">Testimonials</h2>
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
@@ -191,7 +218,7 @@ export default function PastReviews() {
           </button>
         </div>
 
-        {/* ===== Mobile Layout (with animation) ===== */}
+        {/* ===== Mobile Layout ===== */}
         <div className="relative sm:hidden flex flex-col gap-4 transition-all duration-700 ease-in-out">
           <div
             className={`grid gap-4 transition-all duration-700 ease-in-out overflow-visible ${
@@ -200,7 +227,6 @@ export default function PastReviews() {
           >
             {reviews.slice(0, expandedIndex === -1 ? 10 : 5).map((review, index) => (
               <div key={index} id={`review-${index + 1}`} className="relative transition-all duration-500">
-
                 {index === 0 && (
                   <span className="absolute -top-3 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
                     Latest Review
@@ -212,34 +238,31 @@ export default function PastReviews() {
           </div>
 
           {reviews.length > 5 && (
-          <button
-            onClick={() => {
-              if (expandedIndex === -1) {
-                // 👉 Show Less：回到最上方（第一個review）
-                const sectionTop = document.querySelector('#testimonial-section')?.getBoundingClientRect().top
-                const scrollTop = window.scrollY + (sectionTop ?? 0) - 40 // 稍微留空一點
-                window.scrollTo({ top: scrollTop, behavior: 'smooth' })
-                setTimeout(() => setExpandedIndex(null), 400)
-              } else {
-                // 👉 Show More：展開後滾動到第6個review的位置
-                setExpandedIndex(-1)
-                setTimeout(() => {
-                  const sixth = document.querySelector('#review-6')
-                  if (sixth) {
-                    const rect = sixth.getBoundingClientRect().top
-                    const scrollTop = window.scrollY + rect - 80 // 視覺上略微貼近
-                    window.scrollTo({ top: scrollTop, behavior: 'smooth' })
-                  }
-                }, 400)
-              }
-            }}
-            className="mt-3 mx-auto text-sm font-semibold text-blue-600 bg-blue-50 px-5 py-2 rounded-full shadow-sm hover:bg-blue-100 transition-transform duration-500 active:scale-95"
-          >
-            {expandedIndex === -1 ? 'Show Less' : 'Show More'}
-          </button>
-        )}
+            <button
+              onClick={() => {
+                if (expandedIndex === -1) {
+                  const sectionTop = document.querySelector('#testimonial-section')?.getBoundingClientRect().top
+                  const scrollTop = window.scrollY + (sectionTop ?? 0) - 40
+                  window.scrollTo({ top: scrollTop, behavior: 'smooth' })
+                  setTimeout(() => setExpandedIndex(null), 400)
+                } else {
+                  setExpandedIndex(-1)
+                  setTimeout(() => {
+                    const sixth = document.querySelector('#review-6')
+                    if (sixth) {
+                      const rect = sixth.getBoundingClientRect().top
+                      const scrollTop = window.scrollY + rect - 80
+                      window.scrollTo({ top: scrollTop, behavior: 'smooth' })
+                    }
+                  }, 400)
+                }
+              }}
+              className="mt-3 mx-auto text-sm font-semibold text-blue-600 bg-blue-50 px-5 py-2 rounded-full shadow-sm hover:bg-blue-100 transition-transform duration-500 active:scale-95"
+            >
+              {expandedIndex === -1 ? 'Show Less' : 'Show More'}
+            </button>
+          )}
         </div>
-
       </div>
     </section>
   )
@@ -248,9 +271,7 @@ export default function PastReviews() {
 // ===== Review Card =====
 const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: boolean }) => {
   const getAvatarUrl = (name: string) =>
-    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(
-      name.trim()
-    )}&backgroundColor=transparent`
+    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=transparent`
 
   return (
     <div
