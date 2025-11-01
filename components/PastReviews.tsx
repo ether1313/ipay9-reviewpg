@@ -27,92 +27,84 @@ export default function PastReviews() {
   const [avgRating, setAvgRating] = useState(4.6)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ✅ 全域一致 + 每4小時更新邏輯
+  // 🔁 虛構批次控制
+  let virtualSeed = useRef(0)
+  let virtualIndex = useRef(0)
+
+  // 🧩 格式化函數
+  const formatReview = (r: any): Review => ({
+    name: r.name,
+    rating: r.rating,
+    games: typeof r.games === 'string' ? r.games.split(',').map((g: string) => g.trim()) : r.games,
+    comment: r.experiences || r.comment || '',
+    wallet: r.casino_wallet || r.wallet || 'iPay9',
+  })
+
+  // 🎲 取得固定亂數
+  const seededRandom = (seed: number) => {
+    const x = Math.sin(seed) * 10000
+    return x - Math.floor(x)
+  }
+
+  // 🎯 抽取虛構 review
+  const getVirtualReview = (): Review => {
+    const all = reviewBatches.flat()
+    const index = (virtualSeed.current * 17 + virtualIndex.current) % all.length
+    const v = all[index]
+    virtualIndex.current += 1
+    return formatReview(v)
+  }
+
+  // ✅ 初始載入 + 全域統一時間邏輯
   useEffect(() => {
     const baseDate = new Date('2025-11-01T00:00:00Z')
     const now = new Date()
     const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
-
-    // ⏱ 每4小時一個時間段（全世界一致）
     const fourHourBlock = Math.floor(diffHours / 4)
 
-    // ✅ 隨機數生成器（固定每4小時同一批人看到相同結果）
-    const randomSeed = (seed: number) => {
-      const x = Math.sin(seed) * 10000
-      return x - Math.floor(x)
-    }
+    // ✅ 每4小時統一seed
+    virtualSeed.current = fourHourBlock
 
-    // ✅ Review count: 每4小時增加 5–10 個
-    const randomGrowth = Math.floor(5 + randomSeed(fourHourBlock) * 6)
-    const baseCount = 102
-    setReviewCount(baseCount + fourHourBlock * randomGrowth)
-
-    // ✅ 平均評分：在 4.4 - 4.7 間浮動
-    const avg = 4.4 + randomSeed(fourHourBlock + 999) * 0.3
+    // Review count & 平均分
+    const randomGrowth = Math.floor(5 + seededRandom(fourHourBlock) * 6)
+    setReviewCount(102 + fourHourBlock * randomGrowth)
+    const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
     setAvgRating(parseFloat(avg.toFixed(1)))
 
-    // ✅ 主函數：更新評論內容
-    const updateReviews = async () => {
+    // ===== 主更新邏輯 =====
+    const updateInitialReviews = async () => {
       try {
         const res = await fetch('/api/reviews', { cache: 'no-store' })
         const data = await res.json()
 
-        // 真實評論（最新5條）
         const realReviews: Review[] = (data || [])
           .sort((a: any, b: any) => b.id - a.id)
           .slice(0, 5)
-          .map((r: any) => ({
-            name: r.name,
-            rating: r.rating,
-            games:
-              typeof r.games === 'string'
-                ? r.games.split(',').map((g: string) => g.trim())
-                : r.games,
-            comment: r.experiences || '',
-            wallet: r.casino_wallet || 'iPay9',
-          }))
+          .map(formatReview)
 
-        // 虛構評論（每4小時換一次）
-        const allVirtual = reviewBatches.flat()
-        const offset = fourHourBlock % allVirtual.length
-        const virtualPool: Review[] = Array.from({ length: 10 }, (_, i) => {
-          const v = allVirtual[(offset + i) % allVirtual.length]
-          return {
-            name: v.name,
-            rating: v.rating,
-            games: v.games,
-            comment: v.comment,
-            wallet: v.wallet,
-          }
-        })
+        const virtuals = Array.from({ length: 10 - realReviews.length }, () => getVirtualReview())
 
-        // ✅ 合併邏輯：真實優先，但隨機插入位置
-        let combined: Review[] = []
-        if (realReviews.length > 0) {
-          const shuffledVirtual = [...virtualPool].sort(() => Math.random() - 0.5)
-          combined = [
-            ...realReviews.map((r, i) => ({ ...r, order: i + Math.random() })),
-            ...shuffledVirtual.map((v, i) => ({ ...v, order: i + realReviews.length + Math.random() })),
-          ]
-            .sort((a, b) => a.order - b.order)
-            .slice(0, 10)
-        } else {
-          combined = virtualPool
-        }
-
-        setReviews(combined)
+        setReviews([...realReviews, ...virtuals])
       } catch (err) {
         console.error('❌ Failed to fetch reviews:', err)
       }
     }
 
-    // 初次載入
-    updateReviews()
+    updateInitialReviews()
 
-    // ✅ 每4小時自動更新一次
-    const interval = setInterval(updateReviews, 4 * 60 * 60 * 1000)
+    // 🕓 每小時自動拉1條虛構 review
+    const hourly = setInterval(() => {
+      const next = getVirtualReview()
+      setReviews((prev) => [next, ...prev].slice(0, 10))
+    }, 60 * 60 * 1000)
 
-    // ✅ Supabase 即時監聽
+    // 🕓 每4小時更新 seed
+    const fourHourly = setInterval(() => {
+      virtualSeed.current += 1
+      virtualIndex.current = 0
+    }, 4 * 60 * 60 * 1000)
+
+    // 🟢 Supabase 實時監聽
     const channel = supabase
       .channel('realtime:ipay9-review')
       .on(
@@ -120,13 +112,15 @@ export default function PastReviews() {
         { event: 'INSERT', schema: 'public', table: 'ipay9-review' },
         (payload) => {
           console.log('🟢 New review inserted:', payload.new)
-          updateReviews()
+          const newReview = formatReview(payload.new)
+          setReviews((prev) => [newReview, ...prev].slice(0, 10))
         }
       )
       .subscribe()
 
     return () => {
-      clearInterval(interval)
+      clearInterval(hourly)
+      clearInterval(fourHourly)
       supabase.removeChannel(channel)
     }
   }, [])
