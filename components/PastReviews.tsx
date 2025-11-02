@@ -30,6 +30,7 @@ export default function PastReviews() {
   // 🔁 虛構批次控制
   let virtualSeed = useRef(0)
   let virtualIndex = useRef(0)
+  const lastRealReviewTimeRef = useRef<number>(Date.now()) // ✅ 用 useRef 保存時間
 
   // 🧩 格式化函數
   const formatReview = (r: any): Review => ({
@@ -57,77 +58,78 @@ export default function PastReviews() {
 
   // ✅ 初始載入 + 全域統一時間邏輯
   useEffect(() => {
-  const baseDate = new Date('2025-11-01T00:00:00Z')
-  const now = new Date()
-  const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
-  const fourHourBlock = Math.floor(diffHours / 4)
+    const baseDate = new Date('2025-11-01T00:00:00Z')
+    const now = new Date()
+    const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
+    const fourHourBlock = Math.floor(diffHours / 4)
 
-  virtualSeed.current = fourHourBlock
+    virtualSeed.current = fourHourBlock
 
-  const randomGrowth = Math.floor(5 + seededRandom(fourHourBlock) * 6)
-  setReviewCount(102 + fourHourBlock * randomGrowth)
-  const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
-  setAvgRating(parseFloat(avg.toFixed(1)))
+    const randomGrowth = Math.floor(5 + seededRandom(fourHourBlock) * 6)
+    setReviewCount(102 + fourHourBlock * randomGrowth)
+    const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
+    setAvgRating(parseFloat(avg.toFixed(1)))
 
-  let lastRealReviewTime = Date.now()
+    // ✅ 初始載入
+    const updateInitialReviews = async () => {
+      try {
+        const res = await fetch('/api/reviews', { cache: 'no-store' })
+        const data = await res.json()
 
-  // ✅ 初始載入
-  const updateInitialReviews = async () => {
-    try {
-      const res = await fetch('/api/reviews', { cache: 'no-store' })
-      const data = await res.json()
+        const realReviews: Review[] = (data || [])
+          .sort((a: any, b: any) => b.id - a.id)
+          .slice(0, 5)
+          .map(formatReview)
 
-      const realReviews: Review[] = (data || [])
-        .sort((a: any, b: any) => b.id - a.id)
-        .slice(0, 5)
-        .map(formatReview)
-
-      const virtuals = Array.from({ length: 10 - realReviews.length }, () => getVirtualReview())
-      setReviews([...realReviews, ...virtuals])
-    } catch (err) {
-      console.error('❌ Failed to fetch reviews:', err)
-    }
-  }
-
-  updateInitialReviews()
-
-  // 🕓 每小時：若沒有新真實 review，就補一條虛構的
-  const hourly = setInterval(() => {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000
-    if (lastRealReviewTime < oneHourAgo) {
-      const fake = getVirtualReview()
-      setReviews((prev) => [fake, ...prev].slice(0, 10))
-      console.log('🌀 Added virtual review (no real one in last hour)')
-    }
-  }, 60 * 60 * 1000)
-
-  // 🕓 每4小時更新 seed
-  const fourHourly = setInterval(() => {
-    virtualSeed.current += 1
-    virtualIndex.current = 0
-  }, 4 * 60 * 60 * 1000)
-
-  // 🟢 Supabase 實時監聽
-  const channel = supabase
-    .channel('realtime:ipay9-review')
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'ipay9-review' },
-      (payload) => {
-        console.log('🟢 New real review:', payload.new)
-        const newReview = formatReview(payload.new)
-        lastRealReviewTime = Date.now()
-        setReviews((prev) => [newReview, ...prev].slice(0, 10))
+        const virtuals = Array.from({ length: 10 - realReviews.length }, () => getVirtualReview())
+        setReviews([...realReviews, ...virtuals])
+        console.log('✅ Initial reviews loaded.')
+      } catch (err) {
+        console.error('❌ Failed to fetch reviews:', err)
       }
-    )
-    .subscribe()
+    }
 
-  return () => {
-    clearInterval(hourly)
-    clearInterval(fourHourly)
-    supabase.removeChannel(channel)
-  }
-}, [])
+    updateInitialReviews()
+
+    // 🕓 每小時：若沒有新真實 review，就補一條虛構的
+    const hourly = setInterval(() => {
+      const oneHourAgo = Date.now() - 60 * 60 * 1000
+      if (lastRealReviewTimeRef.current < oneHourAgo) {
+        const fake = getVirtualReview()
+        setReviews((prev) => [fake, ...prev].slice(0, 10))
+        lastRealReviewTimeRef.current = Date.now()
+        console.log('🌀 Added virtual review (no real one in last hour)')
+      }
+    }, 60 * 60 * 1000)
+
+    // 🕓 每4小時更新 seed
+    const fourHourly = setInterval(() => {
+      virtualSeed.current += 1
+      virtualIndex.current = 0
+      console.log('🔁 Virtual seed updated.')
+    }, 4 * 60 * 60 * 1000)
+
+    // 🟢 Supabase 實時監聽
+    const channel = supabase
+      .channel('realtime:ipay9-review')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ipay9-review' },
+        (payload) => {
+          console.log('🟢 New real review:', payload.new)
+          const newReview = formatReview(payload.new)
+          lastRealReviewTimeRef.current = Date.now() // ✅ 更新時間
+          setReviews((prev) => [newReview, ...prev].slice(0, 10))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      clearInterval(hourly)
+      clearInterval(fourHourly)
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   // 滑動控制（桌面）
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))

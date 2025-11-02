@@ -263,8 +263,6 @@ const ReviewForm = () => {
         setSelectedGames([])
         setSelectedExperiences([])
         setOthers('')
-        // ❌ 移除這一行：
-        // window.scrollTo({ top: 0, behavior: 'smooth' })
         setTimeout(() => setSubmitStatus(''), 3000)
       } else {
         setSubmitStatus('❌ Something went wrong. Please try again.')
