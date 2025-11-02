@@ -283,7 +283,9 @@ const ReviewForm = () => {
           <h2
             className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 leading-snug"
           >
-            Share Your<br className="block" />
+            Share Your
+            <br className="block sm:hidden" />
+            <span className="hidden sm:inline"> </span>
             Casino Experience
           </h2>
 
