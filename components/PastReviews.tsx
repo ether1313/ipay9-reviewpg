@@ -70,6 +70,9 @@ export default function PastReviews() {
     const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
     setAvgRating(parseFloat(avg.toFixed(1)))
 
+    // 🕓 使用 created_at 判斷時間
+    let lastRealReviewTime = 0
+
     // ✅ 初始載入
     const updateInitialReviews = async () => {
       try {
@@ -81,9 +84,13 @@ export default function PastReviews() {
           .slice(0, 5)
           .map(formatReview)
 
+        // 若後端返回 created_at，使用最新那條的時間
+        if (data?.length > 0 && data[0]?.created_at) {
+          lastRealReviewTime = new Date(data[0].created_at).getTime()
+        }
+
         const virtuals = Array.from({ length: 10 - realReviews.length }, () => getVirtualReview())
         setReviews([...realReviews, ...virtuals])
-        console.log('✅ Initial reviews loaded.')
       } catch (err) {
         console.error('❌ Failed to fetch reviews:', err)
       }
@@ -91,22 +98,21 @@ export default function PastReviews() {
 
     updateInitialReviews()
 
-    // 🕓 每小時：若沒有新真實 review，就補一條虛構的
+    // 🕓 每小時：若沒有新真實 review，就補虛構 review
     const hourly = setInterval(() => {
       const oneHourAgo = Date.now() - 60 * 60 * 1000
-      if (lastRealReviewTimeRef.current < oneHourAgo) {
+      if (lastRealReviewTime < oneHourAgo) {
         const fake = getVirtualReview()
         setReviews((prev) => [fake, ...prev].slice(0, 10))
-        lastRealReviewTimeRef.current = Date.now()
         console.log('🌀 Added virtual review (no real one in last hour)')
+        lastRealReviewTime = Date.now() // 更新虛構補位時間
       }
     }, 60 * 60 * 1000)
 
-    // 🕓 每4小時更新 seed
+    // 🕓 每4小時更新虛構 seed
     const fourHourly = setInterval(() => {
       virtualSeed.current += 1
       virtualIndex.current = 0
-      console.log('🔁 Virtual seed updated.')
     }, 4 * 60 * 60 * 1000)
 
     // 🟢 Supabase 實時監聽
@@ -118,7 +124,11 @@ export default function PastReviews() {
         (payload) => {
           console.log('🟢 New real review:', payload.new)
           const newReview = formatReview(payload.new)
-          lastRealReviewTimeRef.current = Date.now() // ✅ 更新時間
+          if (payload.new?.created_at) {
+            lastRealReviewTime = new Date(payload.new.created_at).getTime()
+          } else {
+            lastRealReviewTime = Date.now()
+          }
           setReviews((prev) => [newReview, ...prev].slice(0, 10))
         }
       )
@@ -130,6 +140,7 @@ export default function PastReviews() {
       supabase.removeChannel(channel)
     }
   }, [])
+
 
   // 滑動控制（桌面）
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))
