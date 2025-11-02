@@ -27,12 +27,12 @@ export default function PastReviews() {
   const [avgRating, setAvgRating] = useState(4.6)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // 🔁 虛構批次控制
-  let virtualSeed = useRef(0)
-  let virtualIndex = useRef(0)
-  const lastRealReviewTimeRef = useRef<number>(Date.now()) // ✅ 用 useRef 保存時間
+  // ✅ 用 ref 保存关键状态（不会因渲染重置）
+  const virtualSeed = useRef(0)
+  const virtualIndex = useRef(0)
+  const lastRealReviewTimeRef = useRef<number>(Date.now())
 
-  // 🧩 格式化函數
+  // 🧩 格式化函数
   const formatReview = (r: any): Review => ({
     name: r.name,
     rating: r.rating,
@@ -41,13 +41,13 @@ export default function PastReviews() {
     wallet: r.casino_wallet || r.wallet || 'iPay9',
   })
 
-  // 🎲 取得固定亂數
+  // 🎲 固定随机数
   const seededRandom = (seed: number) => {
     const x = Math.sin(seed) * 10000
     return x - Math.floor(x)
   }
 
-  // 🎯 抽取虛構 review
+  // 🎯 抽取虚构 review
   const getVirtualReview = (): Review => {
     const all = reviewBatches.flat()
     const index = (virtualSeed.current * 17 + virtualIndex.current) % all.length
@@ -56,7 +56,6 @@ export default function PastReviews() {
     return formatReview(v)
   }
 
-  // ✅ 初始載入 + 全域統一時間邏輯
   useEffect(() => {
     const baseDate = new Date('2025-11-01T00:00:00Z')
     const now = new Date()
@@ -64,16 +63,12 @@ export default function PastReviews() {
     const fourHourBlock = Math.floor(diffHours / 4)
 
     virtualSeed.current = fourHourBlock
-
     const randomGrowth = Math.floor(5 + seededRandom(fourHourBlock) * 6)
     setReviewCount(102 + fourHourBlock * randomGrowth)
     const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
     setAvgRating(parseFloat(avg.toFixed(1)))
 
-    // 🕓 使用 created_at 判斷時間
-    let lastRealReviewTime = 0
-
-    // ✅ 初始載入
+    // ✅ 初始载入
     const updateInitialReviews = async () => {
       try {
         const res = await fetch('/api/reviews', { cache: 'no-store' })
@@ -84,9 +79,9 @@ export default function PastReviews() {
           .slice(0, 5)
           .map(formatReview)
 
-        // 若後端返回 created_at，使用最新那條的時間
+        // ✅ 更新最新真实评论时间
         if (data?.length > 0 && data[0]?.created_at) {
-          lastRealReviewTime = new Date(data[0].created_at).getTime()
+          lastRealReviewTimeRef.current = new Date(data[0].created_at).getTime()
         }
 
         const virtuals = Array.from({ length: 10 - realReviews.length }, () => getVirtualReview())
@@ -98,24 +93,24 @@ export default function PastReviews() {
 
     updateInitialReviews()
 
-    // 🕓 每小時：若沒有新真實 review，就補虛構 review
+    // 🕓 每小时补虚构评论
     const hourly = setInterval(() => {
       const oneHourAgo = Date.now() - 60 * 60 * 1000
-      if (lastRealReviewTime < oneHourAgo) {
+      if (lastRealReviewTimeRef.current < oneHourAgo) {
         const fake = getVirtualReview()
         setReviews((prev) => [fake, ...prev].slice(0, 10))
         console.log('🌀 Added virtual review (no real one in last hour)')
-        lastRealReviewTime = Date.now() // 更新虛構補位時間
+        lastRealReviewTimeRef.current = Date.now()
       }
     }, 60 * 60 * 1000)
 
-    // 🕓 每4小時更新虛構 seed
+    // 🕓 每4小时换seed
     const fourHourly = setInterval(() => {
       virtualSeed.current += 1
       virtualIndex.current = 0
     }, 4 * 60 * 60 * 1000)
 
-    // 🟢 Supabase 實時監聽
+    // 🟢 Supabase 实时监听
     const channel = supabase
       .channel('realtime:ipay9-review')
       .on(
@@ -124,11 +119,9 @@ export default function PastReviews() {
         (payload) => {
           console.log('🟢 New real review:', payload.new)
           const newReview = formatReview(payload.new)
-          if (payload.new?.created_at) {
-            lastRealReviewTime = new Date(payload.new.created_at).getTime()
-          } else {
-            lastRealReviewTime = Date.now()
-          }
+          lastRealReviewTimeRef.current = payload.new?.created_at
+            ? new Date(payload.new.created_at).getTime()
+            : Date.now()
           setReviews((prev) => [newReview, ...prev].slice(0, 10))
         }
       )
