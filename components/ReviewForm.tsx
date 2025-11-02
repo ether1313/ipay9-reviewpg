@@ -211,17 +211,18 @@ const ReviewForm = () => {
   ];
 
   const experiences = [
-    "Fast withdrawals, no waiting",
-    "Smooth and fair gameplay",
-    "Instant deposits and rewards",
-    "24/7 friendly support team",
-    "Safe and trusted platform",
-    "Easy to play on mobile",
-    "Huge choice of live games",
-    "Clear and honest bonus system",
-    "High RTP, real winnings",
-    "Stable and reliable every time"
+    "High volatility slot excitement",
+    "Rapid bonus trigger frequency",
+    "Smooth in-game animation quality",
+    "Optimized wagering flow",
+    "Transparent payout calculation",
+    "Real-time rebate progression",
+    "Stable connection during live tables",
+    "Dynamic jackpot accumulation",
+    "Efficient bet-to-payout ratio",
+    "24/7 responsive player support"
   ];
+
 
   const allGames = [
     { label: 'Live Games', isGroup: true },
