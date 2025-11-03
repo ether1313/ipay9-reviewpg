@@ -27,7 +27,6 @@ export default function PastReviews() {
   const [avgRating, setAvgRating] = useState(4.6)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ✅ 用 ref 保存关键状态（不会因渲染重置）
   const virtualSeed = useRef(0)
   const virtualIndex = useRef(0)
   const lastRealReviewTimeRef = useRef<number>(Date.now())
@@ -47,13 +46,14 @@ export default function PastReviews() {
     return x - Math.floor(x)
   }
 
-  // 🎯 抽取虚构 review
+  // 🎯 抽取虚构 review（带 auto 标记）
   const getVirtualReview = (): Review => {
     const all = reviewBatches.flat()
     const index = (virtualSeed.current * 17 + virtualIndex.current) % all.length
     const v = all[index]
     virtualIndex.current += 1
-    return formatReview(v)
+    const base = formatReview(v)
+    return { ...base, comment: `${base.comment} (auto)` }
   }
 
   useEffect(() => {
@@ -79,7 +79,6 @@ export default function PastReviews() {
           .slice(0, 5)
           .map(formatReview)
 
-        // ✅ 更新最新真实评论时间
         if (data?.length > 0 && data[0]?.created_at) {
           lastRealReviewTimeRef.current = new Date(data[0].created_at).getTime()
         }
@@ -93,24 +92,24 @@ export default function PastReviews() {
 
     updateInitialReviews()
 
-    // 🕓 每小时补虚构评论
+    // 🕓 每小时检查是否需要补虚构评论
     const hourly = setInterval(() => {
       const oneHourAgo = Date.now() - 60 * 60 * 1000
       if (lastRealReviewTimeRef.current < oneHourAgo) {
         const fake = getVirtualReview()
         setReviews((prev) => [fake, ...prev].slice(0, 10))
-        console.log('🌀 Added virtual review (no real one in last hour)')
+        console.log('❕ Added virtual review as top (no real one in last hour)')
         lastRealReviewTimeRef.current = Date.now()
       }
     }, 60 * 60 * 1000)
 
-    // 🕓 每4小时换seed
+    // 🕓 每4小时更新 seed
     const fourHourly = setInterval(() => {
       virtualSeed.current += 1
       virtualIndex.current = 0
     }, 4 * 60 * 60 * 1000)
 
-    // 🟢 Supabase 实时监听
+    // 🟢 Supabase 实时监听真实评论
     const channel = supabase
       .channel('realtime:ipay9-review')
       .on(
@@ -122,6 +121,7 @@ export default function PastReviews() {
           lastRealReviewTimeRef.current = payload.new?.created_at
             ? new Date(payload.new.created_at).getTime()
             : Date.now()
+          // ✅ 新的真实 review 永远放在最上
           setReviews((prev) => [newReview, ...prev].slice(0, 10))
         }
       )
@@ -134,12 +134,11 @@ export default function PastReviews() {
     }
   }, [])
 
-
-  // 滑動控制（桌面）
+  // 滑动控制（桌面）
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))
   const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5))
 
-  // 手勢滑動（行動端）
+  // 手势滑动（移动端）
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -316,7 +315,13 @@ const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: b
           ))}
         </div>
 
-        <p className="text-gray-600 text-sm mb-3 line-clamp-5">"{review.comment}"</p>
+        <p
+          className={`text-sm mb-3 line-clamp-5 ${
+            review.comment.includes('(auto)') ? 'text-gray-400 italic' : 'text-gray-600'
+          }`}
+        >
+          "{review.comment}"
+        </p>
       </div>
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-2 sm:pt-3">
