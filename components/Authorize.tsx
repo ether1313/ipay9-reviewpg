@@ -41,7 +41,7 @@ const Authorize = () => {
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
-            className="text-lg sm:text-2xl lg:text-4xl font-bold mb-6 sm:mb-8 lg:mb-12 bg-gradient-to-r from-blue-600 to-purple-500 bg-clip-text text-transparent text-center"
+            className="text-lg sm:text-2xl lg:text-4xl font-bold mb-6 sm:mb-8 lg:mb-12 text-gray-800 text-center"
             >
             <span className="block sm:inline">Officially Recognized by</span>{' '}
             <span className="block sm:inline">TPA</span>

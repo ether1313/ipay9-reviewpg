@@ -11,9 +11,10 @@ const SocialMedia = () => {
     <section className="py-4 sm:py-10 lg:py-16 px-4">
       <div className="max-w-4xl mx-auto text-center">
         {/* ===== Heading ===== */}
-        <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-['Orbitron']">
+        <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 text-gray-800 font-['Orbitron']">
           Join the iPay9 Community
         </h2>
+
 
         {/* ===== Social Icons ===== */}
         <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-15 lg:gap-12 mb-6 sm:mb-8">
