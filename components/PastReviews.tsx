@@ -94,14 +94,14 @@ export default function PastReviews() {
 
     // 🕓 每小时检查是否需要补虚构评论
     const hourly = setInterval(() => {
-      const oneHourAgo = Date.now() - 10000
+      const oneHourAgo = Date.now() - 60 * 60 * 1000
       if (lastRealReviewTimeRef.current < oneHourAgo) {
         const fake = getVirtualReview()
         setReviews((prev) => [fake, ...prev].slice(0, 10))
         console.log('❕ Added virtual review as top (no real one in last hour)')
         lastRealReviewTimeRef.current = Date.now()
       }
-    }, 10000)
+    }, 60 * 60 * 1000)
 
     // 🕓 每4小时更新 seed
     const fourHourly = setInterval(() => {

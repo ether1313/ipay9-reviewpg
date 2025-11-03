@@ -44,7 +44,7 @@ const Authorize = () => {
             className="text-lg sm:text-2xl lg:text-4xl font-bold mb-6 sm:mb-8 lg:mb-12 bg-gradient-to-r from-blue-600 to-purple-500 bg-clip-text text-transparent text-center"
             >
             <span className="block sm:inline">Officially Recognized by</span>{' '}
-            <span className="block sm:inline">Trusted Pokies Australia</span>
+            <span className="block sm:inline">TPA</span>
         </motion.h2>
 
         {/* 徽章 + 文字 */}
