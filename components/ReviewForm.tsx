@@ -280,7 +280,7 @@ const ReviewForm = () => {
     <section id="review-form" className="py-12 px-4">
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
         <div
-          className="relative min-h-screen overflow-hidden rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md p-8">
+          className="relative h-auto overflow-hidden rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md p-8">
             <div
               className="absolute inset-0 bg-[url('/backgrounds/ipay9-bg.png')] bg-cover bg-center bg-no-repeat -z-10"
             ></div>
