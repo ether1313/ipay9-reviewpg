@@ -63,7 +63,7 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
           {selected.length > 0 ? selected.join(', ') : placeholderText}
         </span>
         <ChevronDown
-          className={`w-5 h-5 text-gray-500 transform transition-transform duration-300 ${
+          className={`w-5 h-5 text-black transform transition-transform duration-300 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -279,9 +279,9 @@ const ReviewForm = () => {
   return (
     <section id="review-form" className="py-12 px-4">
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
-        <div className="backdrop-blur-md bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl relative overflow-hidden">
+        <div className="backdrop-blur-md bg-[url('/backgrounds/ipay9-bg.png')] bg-cover bg-center bg-no-repeat rounded-3xl p-8 border border-white/20 shadow-2xl relative overflow-hidden">
           <h2
-            className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 leading-snug"
+            className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-[#232323] leading-snug"
           >
             Share Your
             <br className="block sm:hidden" />
@@ -334,7 +334,7 @@ const ReviewForm = () => {
                       className={`w-7 h-7 ${
                         star <= (hoveredRating || rating)
                           ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300'
+                          : 'text-[#898989]'
                       }`}
                     />
                   </button>
