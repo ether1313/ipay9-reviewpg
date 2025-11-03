@@ -101,7 +101,7 @@ export default function PastReviews() {
         console.log('❕ Added virtual review as top (no real one in last hour)')
         lastRealReviewTimeRef.current = Date.now()
       }
-    }, 60 * 60 * 1000)
+    }, 5 * 60 * 1000)
 
     // 🕓 每4小时更新 seed
     const fourHourly = setInterval(() => {
@@ -132,6 +132,22 @@ export default function PastReviews() {
       clearInterval(fourHourly)
       supabase.removeChannel(channel)
     }
+  }, [])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const oneHourAgo = Date.now() - 60 * 60 * 1000
+        if (lastRealReviewTimeRef.current < oneHourAgo) {
+          const fake = getVirtualReview()
+          setReviews((prev) => [fake, ...prev].slice(0, 10))
+          console.log('🔄 Added virtual review after tab became visible (>1h)')
+          lastRealReviewTimeRef.current = Date.now()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
   // 滑动控制（桌面）
