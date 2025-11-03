@@ -279,7 +279,14 @@ const ReviewForm = () => {
   return (
     <section id="review-form" className="py-12 px-4">
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
-        <div className="backdrop-blur-md bg-[url('/backgrounds/ipay9-bg.png')] bg-cover bg-center bg-no-repeat rounded-3xl p-8 border border-white/20 shadow-2xl relative overflow-hidden">
+        <div
+          className="relative min-h-screen overflow-hidden rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md p-8">
+            <div
+              className="absolute inset-0 bg-[url('/backgrounds/ipay9-bg.png')] bg-cover bg-center bg-no-repeat -z-10"
+            ></div>
+
+            {/* 半透明遮罩層（讓字清晰、不白邊） */}
+            <div className="absolute inset-0 bg-white/10 -z-10"></div>
           <h2
             className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-[#232323] leading-snug"
           >
