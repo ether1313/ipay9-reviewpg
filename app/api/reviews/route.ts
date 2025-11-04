@@ -1,26 +1,51 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/utils/supabase/client'
+import { createClient } from '@supabase/supabase-js'
 
-// ✅ 禁用 Next.js 缓存，确保返回实时数据
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// 禁止快取，確保即時更新
 export const revalidate = 0
 
-// ✅ POST：新增一条用户评论
+// GET：取得最新 10 条评论
+export async function GET() {
+  try {
+    const { data, error } = await supabase
+      .from('ipay9_review')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (error) throw error
+
+    return NextResponse.json(data || [], {
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  } catch (error: any) {
+    console.error('❌ Error fetching reviews:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// POST：插入新评论（真实评论）
 export async function POST(req: Request) {
   try {
     const { name, casino_wallet, games, experiences, rating, others } = await req.json()
 
-    // 🔹 基本字段验证
+    // 基础验证
     if (!name || !casino_wallet || !games || !experiences || !rating) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // 🔹 插入到 Supabase 表
-    const { error } = await supabase.from('ipay9-review').insert([
+    // 插入数据到表 ipay9_review
+    const { error } = await supabase.from('ipay9_review').insert([
       {
         name,
         casino_wallet,
-        games,
-        experiences,
+        games: Array.isArray(games) ? games.join(', ') : games,
+        experiences: Array.isArray(experiences) ? experiences.join(', ') : experiences,
         rating,
         others: others || '',
       },
@@ -28,42 +53,9 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    // ✅ 成功响应
     return NextResponse.json({ message: '✅ Review saved successfully!' })
   } catch (error: any) {
     console.error('❌ Error saving review:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-// ✅ GET：获取所有评论（最新在最前）
-export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from('ipay9-review')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    // ✅ 设置响应头：禁止缓存
-    return new NextResponse(JSON.stringify(data), {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
-        'Content-Type': 'application/json',
-      },
-    })
-  } catch (error: any) {
-    console.error('❌ Error fetching reviews:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch reviews' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

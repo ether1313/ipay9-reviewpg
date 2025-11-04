@@ -1,10 +1,16 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import { Star, Send, ChevronDown, Search } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 
-// ====== ✅ MultiSelectDropdown（支持群组、搜索、多选）======
+// 初始化 Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// ====== MultiSelectDropdown（支持群组、搜索、多选）======
 interface DropdownProps {
   label: string
   options: { label: string; isGroup?: boolean }[]
@@ -30,10 +36,8 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
 
   const toggleOption = (option: string) => {
     if (selected.includes(option)) {
-      // 取消选择
       setSelected(selected.filter((item) => item !== option))
     } else {
-      // 限制最多3个
       if (selected.length >= 3) {
         alert(`⚠️ You can select up to 3 ${label.toLowerCase()} only.`)
         return
@@ -42,7 +46,6 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
     }
   }
 
-  // ✅ 根据 label 定义 placeholder
   const placeholderText =
     label === 'Games'
       ? 'Select up to 3 games'
@@ -115,8 +118,7 @@ const MultiSelectDropdown = ({ label, options, selected, setSelected }: Dropdown
   )
 }
 
-
-// ====== ✅ 主表单 ======
+// ====== 主表单 ======
 const ReviewForm = () => {
   const [name, setName] = useState('')
   const [rating, setRating] = useState(0)
@@ -127,7 +129,6 @@ const ReviewForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState('')
 
-  // 游戏和体验数据
   const liveGames = [
     'Big Gaming',
     'CT855',
@@ -223,7 +224,6 @@ const ReviewForm = () => {
     "24/7 responsive player support"
   ];
 
-
   const allGames = [
     { label: 'Live Games', isGroup: true },
     ...liveGames.map((g) => ({ label: g })),
@@ -232,7 +232,7 @@ const ReviewForm = () => {
   ]
   const allExperiences = experiences.map((e) => ({ label: e }))
 
-  // ✅ 提交函数（写入 Supabase）
+  // 提交函数（直接写入 Supabase）
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return alert('⚠️ Please enter your name.')
@@ -244,33 +244,30 @@ const ReviewForm = () => {
     setSubmitStatus('')
 
     try {
-      const response = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { error } = await supabase.from('ipay9_review').insert([
+        {
           name,
           casino_wallet: 'iPay9',
           games: selectedGames.join(', '),
           experiences: selectedExperiences.join(', '),
           rating,
           others,
-        }),
-      })
+        },
+      ])
 
-      if (response.ok) {
-        setSubmitStatus('✅ Thank you! Your review has been submitted successfully.')
-        setName('')
-        setRating(0)
-        setSelectedGames([])
-        setSelectedExperiences([])
-        setOthers('')
-        setTimeout(() => setSubmitStatus(''), 3000)
-      } else {
-        setSubmitStatus('❌ Something went wrong. Please try again.')
-        setTimeout(() => setSubmitStatus(''), 3000)
-      }
-    } catch {
-      setSubmitStatus('⚠️ Network error. Please check your connection.')
+      if (error) throw error
+
+      setSubmitStatus('✅ Thank you! Your review has been submitted successfully.')
+      setName('')
+      setRating(0)
+      setSelectedGames([])
+      setSelectedExperiences([])
+      setOthers('')
+      setTimeout(() => setSubmitStatus(''), 3000)
+    } catch (err: any) {
+      console.error('❌ Insert error:', err)
+      setSubmitStatus('❌ Something went wrong. Please try again.')
+      setTimeout(() => setSubmitStatus(''), 3000)
     } finally {
       setIsSubmitting(false)
     }
@@ -281,15 +278,10 @@ const ReviewForm = () => {
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
         <div
           className="relative h-auto overflow-hidden rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md p-8">
-            <div
-              className="absolute inset-0 bg-[url('/backgrounds/ipay9-bg.png')] bg-cover bg-center bg-no-repeat -z-10"
-            ></div>
+          <div className="absolute inset-0 bg-[url('/backgrounds/ipay9-bg.png')] bg-cover bg-center bg-no-repeat -z-10"></div>
+          <div className="absolute inset-0 bg-white/10 -z-10"></div>
 
-            {/* 半透明遮罩層（讓字清晰、不白邊） */}
-            <div className="absolute inset-0 bg-white/10 -z-10"></div>
-          <h2
-            className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-[#232323] leading-snug"
-          >
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-[#232323] leading-snug">
             Share Your
             <br className="block sm:hidden" />
             <span className="hidden sm:inline"> </span>
@@ -321,8 +313,18 @@ const ReviewForm = () => {
             </div>
 
             {/* Games & Experiences */}
-            <MultiSelectDropdown label="Games" options={allGames} selected={selectedGames} setSelected={setSelectedGames} />
-            <MultiSelectDropdown label="Your Experience" options={allExperiences} selected={selectedExperiences} setSelected={setSelectedExperiences} />
+            <MultiSelectDropdown
+              label="Games"
+              options={allGames}
+              selected={selectedGames}
+              setSelected={setSelectedGames}
+            />
+            <MultiSelectDropdown
+              label="Your Experience"
+              options={allExperiences}
+              selected={selectedExperiences}
+              setSelected={setSelectedExperiences}
+            />
 
             {/* Rating */}
             <div>
