@@ -50,14 +50,10 @@ export default function PastReviews() {
     const baseDate = new Date('2025-11-01T00:00:00Z')
     const now = new Date()
     const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
-    const fourHourBlock = Math.floor(diffHours / 4) // 每4小时一个周期
-
-    // 固定随机增长：5~10
+    const fourHourBlock = Math.floor(diffHours / 4)
     const randomGrowth = Math.floor(5 + seededRandom(fourHourBlock) * 6)
     const count = 102 + fourHourBlock * randomGrowth
     setReviewCount(count)
-
-    // 平均评分在 4.4~4.7 之间浮动
     const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
     setAvgRating(parseFloat(avg.toFixed(1)))
   }
@@ -79,27 +75,38 @@ export default function PastReviews() {
     }
 
     fetchReviews()
-    updateVirtualStats() // 初次计算虚拟数
-
-    // 每4小时重新计算一次虚拟数
+    updateVirtualStats()
     const interval = setInterval(updateVirtualStats, 4 * 60 * 60 * 1000)
 
-    // Supabase Realtime 监听新评论
+    // ✅ Supabase Realtime 监听新评论
     const channel = supabase
       .channel('realtime:ipay9_review')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'ipay9_review' },
-        (payload) => {
-          const newReview = formatReview(payload.new)
-          setReviews((prev) => [newReview, ...prev].slice(0, 10))
-        }
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ipay9_review' }, (payload) => {
+        const newReview = formatReview(payload.new)
+        setReviews((prev) => {
+          const exists = prev.some((r) => r.name === newReview.name && r.comment === newReview.comment)
+          if (exists) return prev
+          return [newReview, ...prev].slice(0, 10)
+        })
+      })
       .subscribe()
+
+    // ✅ 本地监听来自 ReviewForm 的即时新评论
+    const handleNewReview = (e: CustomEvent) => {
+      const newReview = e.detail
+      setReviews((prev) => {
+        const exists = prev.some((r) => r.name === newReview.name && r.comment === newReview.comment)
+        if (exists) return prev
+        return [newReview, ...prev].slice(0, 10)
+      })
+    }
+
+    window.addEventListener('new-review', handleNewReview as EventListener)
 
     return () => {
       clearInterval(interval)
       supabase.removeChannel(channel)
+      window.removeEventListener('new-review', handleNewReview as EventListener)
     }
   }, [])
 
@@ -136,12 +143,7 @@ export default function PastReviews() {
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  size={18}
-                  fill={i < Math.round(avgRating) ? '#facc15' : '#e5e7eb'}
-                  stroke="none"
-                />
+                <Star key={i} size={18} fill={i < Math.round(avgRating) ? '#facc15' : '#e5e7eb'} stroke="none" />
               ))}
               <span className="ml-1 font-semibold text-gray-800 text-sm sm:text-base">
                 {avgRating.toFixed(1)}/5.0
@@ -153,7 +155,6 @@ export default function PastReviews() {
 
         {/* ===== Desktop Layout ===== */}
         <div className="relative hidden sm:flex items-center justify-start">
-          {/* ← 左箭头 */}
           <button
             onClick={handlePrev}
             className={`absolute -left-6 z-20 p-3 bg-white rounded-full shadow-md hover:bg-gray-100 transition ${
@@ -163,21 +164,15 @@ export default function PastReviews() {
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
 
-          {/* 卡片容器 */}
           <div ref={containerRef} className="w-full overflow-visible px-10">
             <div
               className="flex gap-6 transition-transform duration-700 ease-in-out"
-              style={{
-                transform: `translateX(-${startIndex * 22}%)`,
-              }}
+              style={{ transform: `translateX(-${startIndex * 22}%)` }}
             >
               {reviews.map((review, index) => (
-                <div
-                  key={review.id || index}
-                  className="relative min-w-[20%] max-w-[20%] flex-shrink-0"
-                >
+                <div key={review.id || index} className="relative min-w-[20%] max-w-[20%] flex-shrink-0">
                   {index === 0 && (
-                    <span className="absolute -top-4 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-md">
+                    <span className="absolute -top-4 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-md animate-pulse">
                       Latest Review
                     </span>
                   )}
@@ -187,7 +182,6 @@ export default function PastReviews() {
             </div>
           </div>
 
-          {/* → 右箭头 */}
           <button
             onClick={handleNext}
             className={`absolute -right-6 z-20 p-3 bg-white rounded-full shadow-md hover:bg-gray-100 transition ${
@@ -197,7 +191,6 @@ export default function PastReviews() {
             <ChevronRight className="w-6 h-6 text-gray-600" />
           </button>
         </div>
-
 
         {/* ===== Mobile Layout ===== */}
         <div className="relative sm:hidden flex flex-col gap-4 transition-all duration-700 ease-in-out">
@@ -209,7 +202,7 @@ export default function PastReviews() {
             {reviews.slice(0, expandedIndex === -1 ? 10 : 5).map((review, index) => (
               <div key={review.id || index} id={`review-${index + 1}`} className="relative transition-all duration-500">
                 {index === 0 && (
-                  <span className="absolute -top-3 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
+                  <span className="absolute -top-3 right-4 z-30 bg-gradient-to-r from-indigo-400 to-blue-500 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md animate-pulse">
                     Latest Review
                   </span>
                 )}

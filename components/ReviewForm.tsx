@@ -257,6 +257,19 @@ const ReviewForm = () => {
 
       if (error) throw error
 
+      window.dispatchEvent(
+        new CustomEvent('new-review', {
+          detail: {
+            name,
+            rating,
+            games: selectedGames,
+            comment: selectedExperiences.join(', '),
+            wallet: 'iPay9',
+            created_at: new Date().toISOString(),
+          },
+        })
+      )
+
       setSubmitStatus('✅ Thank you! Your review has been submitted successfully.')
       setName('')
       setRating(0)
