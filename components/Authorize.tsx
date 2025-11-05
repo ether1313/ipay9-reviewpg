@@ -21,7 +21,7 @@ const Authorize = () => {
   return (
     <section
       ref={ref}
-      className="relative py-20 sm:py-24 bg-gradient-to-br from-white via-blue-50 to-blue-100 overflow-hidden"
+      className="relative py-10 sm:py-20 bg-gradient-to-br from-white via-blue-50 to-blue-100 overflow-hidden"
     >
       {/* 背景柔光動態 */}
       <motion.div
@@ -41,14 +41,14 @@ const Authorize = () => {
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
-            className="text-lg sm:text-2xl lg:text-4xl font-bold mb-6 sm:mb-8 lg:mb-12 text-gray-800 text-center"
+            className="text-xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 lg:mb-12 text-gray-800 text-center"
             >
             <span className="block sm:inline">Officially Recognized by TPA</span>{' '}
         </motion.h2>
 
         {/* 徽章 + 文字 */}
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-24 mt-10 px-4 lg:px-12">
-        {/* 👇 動態徽章 */}
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-24 mt-2 px-4 lg:px-12">
+        {/* 動態徽章 */}
         <motion.div
             style={{ scale, y, opacity }}
             className="relative flex flex-col items-center origin-center flex-shrink-0"
@@ -66,18 +66,18 @@ const Authorize = () => {
                 className="object-contain drop-shadow-[0_0_25px_rgba(59,130,246,0.4)]"
             />
             </div>
-            <p className="mt-3 text-xs sm:text-sm text-gray-500 font-medium text-center">
+            <p className="mt-2 text-xs sm:text-sm text-gray-500 font-medium text-center">
             Trusted Pokies Australia · 2025 Certification
             </p>
         </motion.div>
 
-        {/* 👇 描述文字 */}
+        {/* 描述文字 */}
         <motion.div
             initial={{ opacity: 0, x: 0 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
             viewport={{ once: false }}
-            className="max-w-xl text-gray-700 text-sm sm:text-base leading-relaxed text-center lg:text-left mt-6 lg:mt-0"
+            className="max-w-xl text-gray-700 text-sm sm:text-base leading-relaxed text-center lg:text-left mt-2 lg:mt-0"
         >
             <p className="mb-3">
             iPay9 Australia Online Casino Wallet has been officially recognized and recommended by{' '}
@@ -96,7 +96,7 @@ const Authorize = () => {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, delay: 0.8 }}
         viewport={{ once: false }}
-        className="mt-16 sm:mt-20 flex flex-col sm:flex-row items-center justify-center gap-3 text-gray-600 text-center"
+        className="mt-14 sm:mt-18 flex flex-col sm:flex-row items-center justify-center gap-3 text-gray-600 text-center"
         >
         <ShieldCheck className="w-6 h-6 text-blue-600 mx-auto sm:mx-0" />
         <span className="text-sm sm:text-base font-medium">
