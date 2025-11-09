@@ -147,12 +147,17 @@
   animation: fadeIn 0.2s ease-out forwards;
 }
 
-/* === Floting Icon Effect === */
+/* === Floating Icon Animations === */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-6px); }
 }
 
-.animate-float {
-  animation: float 2s ease-in-out infinite;
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.animate-float-fast {
+  animation: float 0.8s ease-in-out infinite, pulse 0.8s ease-in-out infinite;
 }

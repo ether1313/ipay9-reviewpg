@@ -11,7 +11,7 @@ export default function FloatingIcon() {
   return (
     <div
       className="fixed bottom-24 left-4 z-50 flex flex-col items-center gap-1 
-                 animate-float cursor-pointer"
+                 animate-float-fast cursor-pointer"
     >
       {/* Close Button */}
       <button
@@ -26,7 +26,7 @@ export default function FloatingIcon() {
         href="https://ipay9aud.com"
         target="_blank"
         rel="noopener noreferrer"
-        className="rounded-full hover:scale-110 transition-transform duration-300"
+        className="rounded-full transition-transform duration-200 hover:scale-110"
       >
         <Image
           src="/playnow-floatingicon.png"
