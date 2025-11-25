@@ -19,7 +19,7 @@ const SocialMedia = () => {
 
         {/* ===== Social Icons ===== */}
         <div className="w-full flex justify-center">
-          <div className="grid w-full max-w-5xl mx-auto gap-4 sm:gap-6 lg:gap-8 place-items-center [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+          <div className="grid w-full max-w-5xl mx-auto gap-2 sm:gap-4 lg:gap-6 place-items-center [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
             {socialLinks.map((social, index) => (
               <a
                 key={social.name}
@@ -39,7 +39,7 @@ const SocialMedia = () => {
                   <img
                     src={social.icon}
                     alt={social.name}
-                    className="w-64 h-28 sm:w-60 sm:h-32 lg:w-64 lg:h-36 object-contain transition-transform duration-300 group-hover:scale-110"
+                    className="w-64 h-24 sm:w-72 sm:h-32 lg:w-85 lg:h-45 object-contain transition-transform duration-300 group-hover:scale-110"
                   />
                 </div>
                 <span className="sr-only">{social.name}</span>
