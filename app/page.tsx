@@ -9,7 +9,7 @@ import FloatingParticles from '../components/FloatingParticles';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-blue-100 relative overflow-hidden">
+    <main className="min-h-screen relative overflow-hidden">
       <FloatingParticles />
       <HeroSection />
       <ReviewForm />

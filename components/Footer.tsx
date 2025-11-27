@@ -2,27 +2,28 @@ import Link from 'next/link';
 
 const Footer = () => {
   return (
-    <footer className="pt-4 sm:pt-6 lg:pt-8 pb-8 sm:pb-10 lg:pb-12 px-4 relative">
-      {/* 背景发光效果 */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50"></div>
-      <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
-      <div
-        className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-purple-400/10 rounded-full blur-2xl animate-pulse"
-        style={{ animationDelay: '1s' }}
-      ></div>
+    <footer className="relative px-4 py-4 sm:py-5 overflow-hidden">
 
-      <div className="max-w-5xl mx-auto relative z-10">
-        {/* 主卡片容器 */}
-        <div className="relative">
-          <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl opacity-40"></div>
+      {/* 背景柔和渐变，不抢戏 */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0f1117]/40 to-[#0f1117]/80"></div>
 
-          {/* 版权区块 */}
-          <div className="relative border-t border-gray-200/40 mt-4 pt-4 flex justify-center">
-            <p className="text-gray-600 text-xs sm:text-sm text-center font-['Orbitron'] font-light">
+      {/* 柔光点（压低尺寸避免太膨胀） */}
+      <div className="absolute bottom-6 left-1/3 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
+      <div className="absolute bottom-0 right-1/4 w-28 h-28 bg-purple-500/10 rounded-full blur-2xl"></div>
+
+      <div className="relative max-w-5xl mx-auto">
+
+        {/* 更薄的透明 HUD 卡片 */}
+        <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
+
+          <div className="border-t border-white/20 pt-3 flex justify-center">
+            <p className="text-white/70 text-[10px] sm:text-xs font-['Orbitron'] tracking-wide">
               © 2025 iPay9 Trusted Online Casino Wallet
             </p>
           </div>
+
         </div>
+
       </div>
     </footer>
   );

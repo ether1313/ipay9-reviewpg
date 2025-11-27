@@ -184,17 +184,17 @@ export default function PastReviews() {
       <div className="max-w-7xl mx-auto text-center relative">
         {/* ===== Header ===== */}
         <div className="flex flex-col items-center justify-center mb-8 sm:mb-10">
-          <h2 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 sm:mb-3">Testimonials</h2>
+          <h2 className="text-2xl sm:text-4xl font-bold text-[#ecf3ff] mb-2 sm:mb-3">Testimonials</h2>
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} size={18} fill={i < Math.round(avgRating) ? '#facc15' : '#e5e7eb'} stroke="none" />
               ))}
-              <span className="ml-1 font-semibold text-gray-800 text-sm sm:text-base">
+              <span className="ml-1 font-semibold text-[#ecf3ff] text-sm sm:text-base">
                 {avgRating.toFixed(1)}/5.0
               </span>
             </div>
-            <span className="text-xs text-gray-500">{reviewCount.toLocaleString()} reviews</span>
+            <span className="text-xs text-[#ecf3ff]">{reviewCount.toLocaleString()} reviews</span>
           </div>
         </div>
 
@@ -277,25 +277,37 @@ const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: b
 
   return (
     <div
-      className={`bg-white border border-gray-100 shadow-sm rounded-3xl ${
-        isMobile ? 'p-4 h-auto' : 'p-6 h-[360px]'
-      } flex flex-col justify-between text-left transition hover:shadow-lg sm:hover:scale-[1.01]`}
+      className={`
+        bg-white/10 backdrop-blur-md 
+        border border-white/20 shadow-lg shadow-blue-500/10 
+        rounded-3xl transition-all 
+        ${isMobile ? 'p-4 h-auto' : 'p-6 h-[360px]'}
+        flex flex-col justify-between text-left
+        hover:shadow-blue-400/20 hover:scale-[1.02]
+      `}
     >
       <div>
+        {/* Header: Avatar + Name + Rating */}
         <div className="flex items-center gap-3 mb-3">
           <img
             src={getAvatarUrl(review.name)}
             alt={review.name}
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-gray-200 bg-gray-50"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/30 bg-white/10"
           />
+
           <div>
-            <h3 className="font-semibold text-gray-800 text-sm sm:text-base">{review.name}</h3>
+            <h3 className="font-semibold text-white text-sm sm:text-base drop-shadow-md">
+              {review.name}
+            </h3>
+
             <div className="flex space-x-1">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
                   className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
-                    i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                    i < review.rating
+                      ? 'fill-yellow-400 text-yellow-400 drop-shadow-md'
+                      : 'text-white/40'
                   }`}
                 />
               ))}
@@ -303,25 +315,35 @@ const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: b
           </div>
         </div>
 
+        {/* Game Tags */}
         <div className="flex flex-wrap gap-1.5 mb-2 sm:mb-3">
           {review.games?.map((game, i) => (
             <span
               key={i}
-              className="text-[10px] sm:text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100"
+              className="text-[10px] sm:text-[11px] font-semibold 
+              text-blue-200 bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-300/30"
             >
               {game}
             </span>
           ))}
         </div>
 
-        <p className="text-gray-600 text-sm mb-3 line-clamp-5">"{review.comment}"</p>
+        {/* Comment */}
+        <p className="text-white/80 text-sm mb-3 line-clamp-5 drop-shadow-md">
+          "{review.comment}"
+        </p>
       </div>
 
-      <div className="flex items-center justify-between border-t border-gray-100 pt-2 sm:pt-3">
-        <span className="text-xs text-gray-400">Wallet</span>
+      {/* Footer */}
+      <div className="flex items-center justify-between border-t border-white/20 pt-3">
+        <span className="text-xs text-white/60">Wallet</span>
+
         <div className="flex items-center gap-1.5 sm:gap-2">
           <img src="/australia-flag.png" alt="Flag" className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-[10px] sm:text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+          <span
+            className="text-[10px] sm:text-xs font-semibold 
+            text-blue-100 bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-300/30"
+          >
             {review.wallet}
           </span>
         </div>
@@ -329,3 +351,4 @@ const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: b
     </div>
   )
 }
+

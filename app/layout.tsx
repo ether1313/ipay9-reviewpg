@@ -17,20 +17,40 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" type="image/png" href="/review-icon.png" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <link
           href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
       </head>
+
       <body
-        className="antialiased"
+        className="antialiased relative"
         style={{ fontFamily: "'Orbitron', monospace" }}
       >
-        <div style={{ fontFamily: "'Orbitron', monospace" }}>{children}</div>
 
-        {/* 🌟 Floating Icon (client component) */}
+        {/* VIDEO BACKGROUND */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="fixed top-0 left-0 w-full h-full object-cover z-[-2]"
+        >
+          <source src="/background.mp4" type="video/mp4" />
+        </video>
+
+        {/* Optional Overlay */}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[-1]" />
+
+        {/* 页面内容层 */}
+        <div className="relative z-[5]">
+          {children}
+        </div>
+
+        {/* 浮动图标 */}
         <FloatingIcon />
+
       </body>
     </html>
   );

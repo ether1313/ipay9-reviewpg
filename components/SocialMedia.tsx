@@ -13,7 +13,7 @@ const SocialMedia = () => {
       <div className="max-w-5xl mx-auto text-center">
 
         {/* ===== Heading ===== */}
-        <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 text-gray-800 font-['Orbitron']">
+        <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 text-[#ecf3ff] font-['Orbitron']">
           Join the iPay9 Community
         </h2>
 
@@ -49,7 +49,7 @@ const SocialMedia = () => {
         </div>
 
         {/* ===== Subtext ===== */}
-        <p className="text-gray-600 text-sm sm:text-base lg:text-lg px-2 font-['Orbitron'] font-light mt-6">
+        <p className="text-[#ecf3ff] text-sm sm:text-base lg:text-lg px-2 font-['Orbitron'] font-light mt-6">
           Stay connected with iPay9 Australia's most trusted casino review community
         </p>
       </div>
