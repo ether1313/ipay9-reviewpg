@@ -19,14 +19,14 @@ const SocialMedia = () => {
 
         {/* ===== Social Icons ===== */}
         <div className="w-full flex justify-center">
-          <div className="grid w-full max-w-5xl mx-auto gap-2 sm:gap-4 lg:gap-6 place-items-center [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+          <div className="grid w-full max-w-5xl mx-auto gap-1 sm:gap-4 lg:gap-6 place-items-center [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
             {socialLinks.map((social, index) => (
               <a
                 key={social.name}
                 href={social.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative hover:scale-105 transition-transform duration-300 flex-shrink-0 w-full flex justify-center"
+                className="group relative md:hover:scale-105 transition-transform duration-300 flex-shrink-0 w-full flex justify-center"
                 style={{
                   animationName: 'float',
                   animationDuration: '4s',
@@ -39,7 +39,7 @@ const SocialMedia = () => {
                   <img
                     src={social.icon}
                     alt={social.name}
-                    className="w-64 h-24 sm:w-72 sm:h-32 lg:w-85 lg:h-45 object-contain transition-transform duration-300 group-hover:scale-110"
+                    className="w-80 h-32 sm:w-72 sm:h-32 lg:w-85 lg:h-45 object-contain transition-transform duration-300 md:group-hover:scale-110"
                   />
                 </div>
                 <span className="sr-only">{social.name}</span>
