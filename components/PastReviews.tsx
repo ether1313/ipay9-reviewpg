@@ -28,7 +28,7 @@ export default function PastReviews() {
   const [avgRating, setAvgRating] = useState(4.6)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // 格式化函数
+  // ========= 格式化函数 =========
   const formatReview = (r: any): Review => ({
     id: r.id,
     name: r.name,
@@ -39,26 +39,64 @@ export default function PastReviews() {
     created_at: r.created_at,
   })
 
-  // 固定随机函数（全球一致）
+  // ========= 统一随机函数（全球一致）=========
   const seededRandom = (seed: number) => {
-    const x = Math.sin(seed) * 10000
+    const x = Math.sin(seed * 9999.987) * 10000
     return x - Math.floor(x)
   }
 
-  // 计算虚拟统计数（每4小时更新一次）
+  // ========= 是否周末（UTC）=========
+  const isWeekend = (date: Date) => {
+    const d = date.getUTCDay()
+    return d === 0 || d === 6
+  }
+
+  // ========= 当前小时（UTC）=========
+  const getHourUTC = (date: Date) => date.getUTCHours()
+
+  // ========= 虚拟统计（永远递增 + 随机 + 行为模型）=========
   const updateVirtualStats = () => {
     const baseDate = new Date('2025-11-01T00:00:00Z')
     const now = new Date()
+
     const diffHours = Math.floor((now.getTime() - baseDate.getTime()) / 3600000)
     const fourHourBlock = Math.floor(diffHours / 4)
-    const randomGrowth = Math.floor(5 + seededRandom(fourHourBlock) * 6)
-    const count = 102 + fourHourBlock * randomGrowth
+
+    let count = 102
+
+    // ---- 累积每个 4 小时区块的增长 ----
+    for (let i = 1; i <= fourHourBlock; i++) {
+      const blockTime = new Date(baseDate.getTime() + i * 4 * 3600000)
+      const hour = getHourUTC(blockTime)
+
+      // 基础随机（固定随机：5–10）
+      const raw = 5 + Math.floor(seededRandom(i) * 6)
+
+      let multiplier = 1
+
+      // 午夜慢：00–06
+      if (hour >= 0 && hour < 6) multiplier = 0.5
+
+      // 白天快：09–21
+      else if (hour >= 9 && hour < 21) multiplier = 1.3
+
+      // 周末整体加速
+      if (isWeekend(blockTime)) multiplier *= 1.5
+
+      // 最终增长数量（至少 1）
+      const growth = Math.max(Math.floor(raw * multiplier), 1)
+
+      count += growth
+    }
+
     setReviewCount(count)
+
+    // 平均星级
     const avg = 4.4 + seededRandom(fourHourBlock + 999) * 0.3
     setAvgRating(parseFloat(avg.toFixed(1)))
   }
 
-  // 初始化加载评论 + 虚拟统计
+  // ========= 初始化加载评论 + 虚拟统计 =========
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -67,6 +105,7 @@ export default function PastReviews() {
           .select('*')
           .order('created_at', { ascending: false })
           .limit(10)
+
         if (error) throw error
         if (data) setReviews(data.map(formatReview))
       } catch (err) {
@@ -76,9 +115,11 @@ export default function PastReviews() {
 
     fetchReviews()
     updateVirtualStats()
+
+    // 每 4 小时自动更新
     const interval = setInterval(updateVirtualStats, 4 * 60 * 60 * 1000)
 
-    // ✅ Supabase Realtime 监听新评论
+    // ---- Supabase 实时监听新评论 ----
     const channel = supabase
       .channel('realtime:ipay9_review')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ipay9_review' }, (payload) => {
@@ -91,7 +132,7 @@ export default function PastReviews() {
       })
       .subscribe()
 
-    // ✅ 本地监听来自 ReviewForm 的即时新评论
+    // ---- 本地 dispatchEvent 新评论 ----
     const handleNewReview = (e: CustomEvent) => {
       const newReview = e.detail
       setReviews((prev) => {
@@ -110,24 +151,28 @@ export default function PastReviews() {
     }
   }, [])
 
-  // 滑动控制（桌面）
+  // ========= 滑动（桌面）=========
   const handlePrev = () => setStartIndex((prev) => Math.max(prev - 1, 0))
   const handleNext = () => setStartIndex((prev) => Math.min(prev + 1, reviews.length - 5))
 
-  // 手势滑动（移动端）
+  // ========= 滑动（移动端）=========
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+
     let startX = 0
     let endX = 0
+
     const handleTouchStart = (e: TouchEvent) => (startX = e.touches[0].clientX)
     const handleTouchEnd = (e: TouchEvent) => {
       endX = e.changedTouches[0].clientX
       if (startX - endX > 50) handleNext()
       if (endX - startX > 50) handlePrev()
     }
+
     container.addEventListener('touchstart', handleTouchStart)
     container.addEventListener('touchend', handleTouchEnd)
+
     return () => {
       container.removeEventListener('touchstart', handleTouchStart)
       container.removeEventListener('touchend', handleTouchEnd)
@@ -225,7 +270,7 @@ export default function PastReviews() {
   )
 }
 
-// ===== Review Card =====
+// ================= Review Card =================
 const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: boolean }) => {
   const getAvatarUrl = (name: string) =>
     `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=transparent`
