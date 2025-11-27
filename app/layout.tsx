@@ -37,7 +37,7 @@ export default function RootLayout({
           playsInline
           className="fixed top-0 left-0 w-full h-full object-cover z-[-2]"
         >
-          <source src="/background.mp4" type="video/mp4" />
+          <source src="/background02.mp4" type="video/mp4" />
         </video>
 
         {/* Optional Overlay */}

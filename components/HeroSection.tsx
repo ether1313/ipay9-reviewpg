@@ -13,17 +13,16 @@ const HeroSection = () => {
       {/* 限制最大宽度 */}
       <div className="max-w-7xl mx-auto relative z-10">
         {/* 公司 Logo */}
-        <div className="relative w-48 h-24 sm:w-56 sm:h-28 mb-8 
-      bg-white/15 border border-white/20 backdrop-blur-sm 
-        rounded-2xl flex items-center justify-center overflow-hidden mx-auto">
+        <div className="relative w-48 h-24 sm:w-56 sm:h-28 mb-2 
+            rounded-2xl flex items-center justify-center overflow-hidden mx-auto">
 
-          <Image
-            src="/ipay9.png"
-            alt="Company Logo"
-            fill
-            className="object-contain opacity-90"
-          />
-        </div>
+        <Image
+          src="/ipay9.png"
+          alt="Company Logo"
+          fill
+          className="object-contain opacity-90"
+        />
+      </div>
 
         {/* Testimonials 區塊放在這裡 */}
         <div className="mt-2">
