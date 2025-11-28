@@ -13,7 +13,7 @@ const SocialMedia = () => {
       <div className="max-w-5xl mx-auto text-center">
 
         {/* ===== Heading ===== */}
-        <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 text-[#ecf3ff] font-['Orbitron']">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 text-[#ecf3ff] font-['Orbitron']">
           Join the iPay9 Community
         </h2>
 
