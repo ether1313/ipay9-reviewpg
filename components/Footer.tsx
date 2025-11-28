@@ -17,7 +17,7 @@ const Footer = () => {
         <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
 
           <div className="border-t border-white/20 pt-3 flex justify-center">
-            <p className="text-white/70 text-[10px] sm:text-xs font-['Orbitron'] tracking-wide">
+            <p className="text-white/70 text-[12px] sm:text-[15px] font-['Orbitron'] tracking-wide">
               © 2025 iPay9 Trusted Online Casino Wallet
             </p>
           </div>
