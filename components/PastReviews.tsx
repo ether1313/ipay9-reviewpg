@@ -336,7 +336,7 @@ const ReviewCard = ({ review, isMobile = false }: { review: Review; isMobile?: b
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-white/20 pt-3">
-        <span className="text-xs text-white/60">Wallet</span>
+        <span className="text-xs text-white/60">Wallet:</span>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <img src="/australia-flag.png" alt="Flag" className="w-4 h-4 sm:w-5 sm:h-5" />
