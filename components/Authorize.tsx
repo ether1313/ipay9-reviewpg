@@ -65,7 +65,7 @@ const Authorize = () => {
         >
             <p className="mb-3">
             iPay9 Australia Online Casino Wallet has been officially recognized and recommended by{' '}
-            <span className="font-semibold text-blue-700">Trusted Pokies Australia</span> for its
+            <span className="font-semibold text-[#0099ff]">Trusted Pokies Australia</span> for its
             commitment to transparency, security, and entertainment excellence.
             </p>
             <p className="text-[#ecf3ff] italic">
