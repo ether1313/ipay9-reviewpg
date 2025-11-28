@@ -8,7 +8,7 @@ const PastReviews = dynamic(() => import('@/components/PastReviews'), { ssr: fal
 
 const HeroSection = () => {
   return (
-    <section className="relative pt-12 sm:pt-14 md:pt-16 pb-20 flex flex-col items-center justify-center text-center overflow-hidden px-6">
+    <section className="relative pt-12 sm:pt-14 md:pt-16 pb-6 flex flex-col items-center justify-center text-center overflow-hidden px-6">
 
       {/* 限制最大宽度 */}
       <div className="max-w-7xl mx-auto relative z-10">

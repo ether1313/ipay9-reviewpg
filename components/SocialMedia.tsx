@@ -9,7 +9,7 @@ const SocialMedia = () => {
   ];
 
   return (
-    <section className="py-4 sm:py-10 lg:py-16 px-4">
+    <section className="py-4 sm:py-10 lg:py-16 px-4 pb-16">
       <div className="max-w-5xl mx-auto text-center">
 
         {/* ===== Heading ===== */}
