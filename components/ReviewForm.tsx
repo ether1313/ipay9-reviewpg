@@ -255,11 +255,17 @@ const ReviewForm = () => {
           shadow-2xl p-8">
 
           {/* 标题 */}
-          <h2 className="text-3xl font-bold text-center mb-8 
-            text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white"
+          <h2
+            className="
+              font-bold text-center mb-8
+              text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white
+              text-xl sm:text-2xl md:text-3xl lg:text-4xl
+              leading-tight
+            "
           >
-            Share Your Casino Experience
+            Share Your Gaming Experience
           </h2>
+
 
           <form onSubmit={handleSubmit} className="space-y-6">
 
