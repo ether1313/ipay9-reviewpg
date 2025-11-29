@@ -39,7 +39,7 @@ const SocialMedia = () => {
                   <img
                     src={social.icon}
                     alt={social.name}
-                    className="w-80 h-32 sm:w-72 sm:h-32 lg:w-85 lg:h-45 object-contain transition-transform duration-300 md:group-hover:scale-110"
+                    className="w-80 h-28 sm:w-72 sm:h-20 lg:w-85 lg:h-20 object-contain transition-transform duration-300 md:group-hover:scale-110"
                   />
                 </div>
                 <span className="sr-only">{social.name}</span>
