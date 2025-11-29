@@ -29,7 +29,7 @@ export default function FloatingIcon() {
         className="rounded-full transition-transform duration-200 hover:scale-110"
       >
         <Image
-          src="/playnow-floatingicon.png"
+          src="/playnow-floatingicon.gif"
           alt="Spin & Win"
           width={70}
           height={70}
