@@ -26,14 +26,14 @@ export default function FloatingIcon() {
         href="https://ipay9aud.com"
         target="_blank"
         rel="noopener noreferrer"
-        className="rounded-full transition-transform duration-200 hover:scale-110"
+        className="transition-transform duration-200 hover:scale-110"
       >
         <Image
           src="/playnow-floatingicon.gif"
           alt="Spin & Win"
           width={70}
           height={70}
-          className="rounded-full sm:w-[80px] sm:h-[80px] md:w-[90px] md:h-[90px]" 
+          className="sm:w-[80px] sm:h-[80px] md:w-[90px] md:h-[90px]" 
           priority
         />
       </a>
